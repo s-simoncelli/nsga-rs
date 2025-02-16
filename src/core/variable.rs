@@ -2,8 +2,8 @@ use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
 
-use rand::distributions::uniform::SampleUniform;
-use rand::prelude::{IteratorRandom, SliceRandom};
+use rand::distr::uniform::SampleUniform;
+use rand::prelude::{IndexedRandom, IteratorRandom};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
@@ -82,8 +82,8 @@ impl<N: BoundedNumberTrait> BoundedNumber<N> {
 impl<N: BoundedNumberTrait + Copy> Variable<N> for BoundedNumber<N> {
     /// Randomly generate a new bounded number.
     fn generate(&self) -> N {
-        let mut rng = rand::thread_rng();
-        rng.gen_range(self.min_value..=self.max_value)
+        let mut rng = rand::rng();
+        rng.random_range(self.min_value..=self.max_value)
     }
     fn name(&self) -> String {
         self.name.clone()
@@ -132,7 +132,7 @@ impl Variable<bool> for Boolean {
     ///
     /// return: `bool`
     fn generate(&self) -> bool {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         !matches!([0, 1].choose(&mut rng).unwrap(), 0)
     }
     fn name(&self) -> String {
@@ -175,7 +175,7 @@ impl Display for Choice {
 impl Variable<String> for Choice {
     /// Randomly pick a choice.
     fn generate(&self) -> String {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let choice_index = (0..self.choices.len()).choose(&mut rng).unwrap();
         self.choices[choice_index].clone()
     }
@@ -252,10 +252,10 @@ impl VariableType {
 impl Display for VariableType {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            VariableType::Real(v) => write!(f, "{v}").unwrap(),
-            VariableType::Integer(v) => write!(f, "{v}").unwrap(),
-            VariableType::Boolean(v) => write!(f, "{v}").unwrap(),
-            VariableType::Choice(v) => write!(f, "{v}").unwrap(),
+            VariableType::Real(v) => write!(f, "{v}")?,
+            VariableType::Integer(v) => write!(f, "{v}")?,
+            VariableType::Boolean(v) => write!(f, "{v}")?,
+            VariableType::Choice(v) => write!(f, "{v}")?,
         };
         Ok(())
     }
@@ -337,10 +337,10 @@ impl VariableValue {
 impl Debug for VariableValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            VariableValue::Real(v) => write!(f, "{v}").unwrap(),
-            VariableValue::Integer(v) => write!(f, "{v}").unwrap(),
-            VariableValue::Boolean(v) => write!(f, "{v}").unwrap(),
-            VariableValue::Choice(v) => write!(f, "{v}").unwrap(),
+            VariableValue::Real(v) => write!(f, "{v}")?,
+            VariableValue::Integer(v) => write!(f, "{v}")?,
+            VariableValue::Boolean(v) => write!(f, "{v}")?,
+            VariableValue::Choice(v) => write!(f, "{v}")?,
         };
         Ok(())
     }

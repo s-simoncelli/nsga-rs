@@ -1,5 +1,6 @@
-use rand::prelude::SliceRandom;
+use rand::prelude::{IndexedRandom, SliceRandom};
 use rand::{Rng, RngCore};
+
 use serde::{Deserialize, Serialize};
 
 use crate::core::{Individual, OError, VariableType, VariableValue};
@@ -223,7 +224,7 @@ impl SimulatedBinaryCrossover {
         // get the lowest value between the two parent
         let (y1, y2) = if v1 < v2 { (v1, v2) } else { (v2, v1) };
         let delta_y = y2 - y1;
-        let prob = rng.gen_range(0.0..=1.0);
+        let prob = rng.random_range(0.0..=1.0);
 
         // first child
         let beta = 1.0 + (2.0 * (y1 - y_lower) / delta_y);
@@ -290,11 +291,11 @@ impl Crossover for SimulatedBinaryCrossover {
         }
 
         // do not apply crossover if probability is not reached
-        if rng.gen_range(0.0..=1.0) <= self.crossover_probability {
+        if rng.random_range(0.0..=1.0) <= self.crossover_probability {
             for (var_name, var_type) in problem.variables() {
                 // each variable in a solution has a `self.variable_probability` chance of changing
                 // its value
-                if rng.gen_range(0.0..=1.0) > self.variable_probability {
+                if rng.random_range(0.0..=1.0) > self.variable_probability {
                     continue;
                 }
 
@@ -332,11 +333,11 @@ impl Crossover for SimulatedBinaryCrossover {
                             // truncation procedure for integers. Get the integer part then get same
                             // or +1 with a probability threshold of 0.5 to add randomness.
                             let mut new_v1 = new_v1.trunc() as i64;
-                            if rng.gen_range(0.0..=1.0) < 0.5 {
+                            if rng.random_range(0.0..=1.0) < 0.5 {
                                 new_v1 += 1;
                             }
                             let mut new_v2 = new_v2.trunc() as i64;
-                            if rng.gen_range(0.0..=1.0) < 0.5 {
+                            if rng.random_range(0.0..=1.0) < 0.5 {
                                 new_v2 += 1;
                             }
                             // update the children

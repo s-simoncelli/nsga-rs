@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use log::debug;
-use rand::prelude::SliceRandom;
+use rand::prelude::{IndexedRandom, SliceRandom};
 use rand::RngCore;
 
 use crate::algorithms::nsga3::{
