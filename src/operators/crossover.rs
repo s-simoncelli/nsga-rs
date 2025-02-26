@@ -1,4 +1,4 @@
-use rand::prelude::{IndexedRandom, SliceRandom};
+use rand::prelude::IndexedRandom;
 use rand::{Rng, RngCore};
 
 use serde::{Deserialize, Serialize};
