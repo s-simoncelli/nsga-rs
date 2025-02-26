@@ -335,10 +335,14 @@ impl Crossover for SimulatedBinaryCrossover {
                             let mut new_v1 = new_v1.trunc() as i64;
                             if rng.random_range(0.0..=1.0) < 0.5 {
                                 new_v1 += 1;
+                                // ensure the new integer is below the variable upper bound
+                                new_v1 = new_v1.min(y_upper);
                             }
                             let mut new_v2 = new_v2.trunc() as i64;
                             if rng.random_range(0.0..=1.0) < 0.5 {
                                 new_v2 += 1;
+                                // ensure the new integer is below the variable upper bound
+                                new_v2 = new_v2.min(y_upper);
                             }
 
                             // update the children

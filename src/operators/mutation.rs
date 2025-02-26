@@ -224,6 +224,8 @@ impl Mutation for PolynomialMutation {
                     let mut new_y = new_y.trunc() as i64;
                     if rng.random_range(0.0..=1.0) < 0.5 {
                         new_y += 1;
+                        // ensure the new integer is below the variable upper bound
+                        new_y = new_y.min(y_upper);
                     }
                     mutated_individual.update_variable(&var_name, VariableValue::Integer(new_y))?;
                 }
