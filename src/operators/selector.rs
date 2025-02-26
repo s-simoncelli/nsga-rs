@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use rand::prelude::SliceRandom;
+use rand::prelude::IndexedRandom;
 use rand::RngCore;
 
 use crate::core::{Individual, OError};

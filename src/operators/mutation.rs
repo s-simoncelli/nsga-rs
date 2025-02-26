@@ -164,7 +164,7 @@ impl PolynomialMutation {
     /// returns: `f64`
     fn mutate_variable(&self, y: f64, y_lower: f64, y_upper: f64, rng: &mut dyn RngCore) -> f64 {
         let delta_y = y_upper - y_lower;
-        let prob = rng.gen_range(0.0..=1.0);
+        let prob = rng.random_range(0.0..=1.0);
 
         // this is delta_l or delta_r
         let delta = if prob <= 0.5 {
@@ -208,7 +208,7 @@ impl Mutation for PolynomialMutation {
 
         // do not apply crossover if probability is not reached
         for (var_name, var_type) in problem.variables() {
-            if rng.gen_range(0.0..=1.0) <= self.variable_probability {
+            if rng.random_range(0.0..=1.0) <= self.variable_probability {
                 let y = individual.get_variable_value(&var_name)?;
                 if let (VariableValue::Real(y), VariableType::Real(vt)) = (y, &var_type) {
                     let (y_lower, y_upper) = vt.bounds();
@@ -222,7 +222,7 @@ impl Mutation for PolynomialMutation {
 
                     // truncate
                     let mut new_y = new_y.trunc() as i64;
-                    if rng.gen_range(0.0..=1.0) < 0.5 {
+                    if rng.random_range(0.0..=1.0) < 0.5 {
                         new_y += 1;
                     }
                     mutated_individual.update_variable(&var_name, VariableValue::Integer(new_y))?;
