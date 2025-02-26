@@ -8,6 +8,6 @@ name = "optirustic"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.23.5", features = ["chrono", "multiple-pymethods"] }
+pyo3 = { version = "0.22.2", features = ["chrono", "multiple-pymethods"] }
 optirustic = { path = ".." }
 chrono = "0.4.38"

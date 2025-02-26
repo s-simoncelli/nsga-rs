@@ -243,7 +243,7 @@ create_interface!(NSGA3, RustNSGA3, NSGA3Arg);
 
 #[pymethods]
 impl NSGA3 {
-    /// Refrence point plot using the points exported by the NSGA3 algorithm
+    /// Reference point plot using the points exported by the NSGA3 algorithm
     pub fn plot_reference_points(&self) -> PyResult<PyObject> {
         let algorithm_data = self.additional_data.as_ref().unwrap();
         Python::with_gil(|py| {
