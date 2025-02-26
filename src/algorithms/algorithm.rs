@@ -199,6 +199,20 @@ impl ExportHistory {
             destination: destination.to_owned(),
         })
     }
+
+    /// Get the destination where to save the files.
+    ///
+    /// returns: `&PathBuf`
+    pub fn destination(&self) -> &PathBuf {
+        &self.destination
+    }
+
+    /// Get the number of generation step the history file is saved.
+    ///
+    /// returns: `usize`
+    pub fn generation_step(&self) -> usize {
+        self.generation_step
+    }
 }
 
 impl Display for AlgorithmExport {
