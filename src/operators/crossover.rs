@@ -340,6 +340,7 @@ impl Crossover for SimulatedBinaryCrossover {
                             if rng.random_range(0.0..=1.0) < 0.5 {
                                 new_v2 += 1;
                             }
+
                             // update the children
                             child1.update_variable(&var_name, VariableValue::Integer(new_v1))?;
                             child2.update_variable(&var_name, VariableValue::Integer(new_v2))?;
@@ -419,8 +420,8 @@ mod test {
             variable_probability: 1.0,
         };
         let sbx = SimulatedBinaryCrossover::new(parameters).unwrap();
-        // seed 1 to try reproducing test results
-        let mut rng = get_rng(Some(1));
+        // seed to try reproducing test results
+        let mut rng = get_rng(Some(20000));
         let out = sbx.generate_offsprings(&a, &b, &mut rng).unwrap();
 
         // Crossover always performed because variable_probability is 1
