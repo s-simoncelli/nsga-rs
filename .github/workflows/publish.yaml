@@ -1,0 +1,40 @@
+name: Publish crate
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - "*"
+
+jobs:
+  crates_io_publish:
+    name: Publish (crates.io)
+    runs-on: ubuntu-latest
+    steps:
+      # Enable this when testing with nektos/act
+      #      - uses: actions-rs/toolchain@v1
+      #        with:
+      #          toolchain: stable
+      #          override: true
+      #      - name: Install Clang
+      #        run: sudo apt update && sudo apt install --yes clang
+
+      - uses: actions/checkout@v4
+      - name: Verify that Cargo.toml version matches tag
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/*}"
+          CARGO_VERSION=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[2].version')
+          if [[ "$TAG_VERSION" != "$CARGO_VERSION" ]]; then
+          echo "Error: Tag version ($TAG_VERSION) does not match Cargo.toml version ($CARGO_VERSION)"
+          exit 1
+          fi
+
+      - name: Build and test the crate
+        run: |
+          cargo check
+          cargo test
+
+      - name: Cargo login
+        run: cargo login ${{ secrets.CRATES_IO_API_TOKEN }}
+      - name: Publish
+        run: cargo publish --verbose --no-verify -p optirustic
