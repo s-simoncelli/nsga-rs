@@ -48,6 +48,7 @@ jobs:
           manylinux: auto
       - name: Check Python syntax
         run: |
+          cd optirustic-py
           pip install '.[dev]'
           ruff check
           ruff format
@@ -55,7 +56,7 @@ jobs:
       - name: Test Python API
         run: |
           pip install optirustic --find-links dist --force-reinstall
-          python -m pytest optirustic-py/tests/test_api.py
+          python -m pytest tests/test_api.py
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
