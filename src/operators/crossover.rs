@@ -3,6 +3,9 @@ use rand::{Rng, RngCore};
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
 use crate::core::{Individual, OError, VariableType, VariableValue};
 
 /// Struct containing the offsprings from the crossover operation.
@@ -35,6 +38,7 @@ pub trait Crossover {
 }
 
 /// Input arguments for [`SimulatedBinaryCrossover`].
+#[cfg_attr(feature = "python", pyclass(get_all))]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SimulatedBinaryCrossoverArgs {
     /// The distribution index for crossover (this is the eta_c in the paper). This directly
@@ -61,6 +65,36 @@ impl Default for SimulatedBinaryCrossoverArgs {
             crossover_probability: 1.0,
             variable_probability: 0.5,
         }
+    }
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl SimulatedBinaryCrossoverArgs {
+    #[new]
+    #[pyo3(signature = (distribution_index=None, crossover_probability=None, variable_probability=None))]
+    fn new(
+        distribution_index: Option<f64>,
+        crossover_probability: Option<f64>,
+        variable_probability: Option<f64>,
+    ) -> Self {
+        let defaults = SimulatedBinaryCrossoverArgs::default();
+        SimulatedBinaryCrossoverArgs {
+            distribution_index: distribution_index.unwrap_or(defaults.distribution_index),
+            crossover_probability: crossover_probability.unwrap_or(defaults.crossover_probability),
+            variable_probability: variable_probability.unwrap_or(defaults.variable_probability),
+        }
+    }
+
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!(
+            "SimulatedBinaryCrossoverArgs(distribution_index={}, crossover_probability={}, variable_probability={})",
+            self.distribution_index, self.crossover_probability, self.variable_probability
+        ))
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__().unwrap()
     }
 }
 

@@ -2,9 +2,9 @@ pub use a_nsga3::AdaptiveNSGA3;
 pub use algorithm::{Algorithm, AlgorithmExport, AlgorithmSerialisedExport, ExportHistory};
 pub use nsga2::{NSGA2Arg, NSGA2};
 pub use nsga3::{NSGA3Arg, Nsga3NumberOfIndividuals, NSGA3};
-pub use stopping_condition::{
-    MaxDurationValue, MaxGenerationValue, StoppingCondition, StoppingConditionType,
-};
+#[cfg(feature = "python")]
+pub use stopping_condition::py::PyStoppingConditionValue;
+pub use stopping_condition::StoppingCondition;
 
 mod a_nsga3;
 mod algorithm;

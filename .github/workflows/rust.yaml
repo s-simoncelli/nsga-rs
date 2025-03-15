@@ -20,8 +20,10 @@ jobs:
       #      - name: Install Clang
       #        run: sudo apt update && sudo apt install --yes clang
       - uses: actions/checkout@v4
-      - name: Build
-        run: cargo build --verbose
+      - name: Build (no features)
+        run: cargo build --verbose -p optirustic
+      - name: Build (with all features)
+        run: cargo build --verbose -p optirustic --all-features
       - name: Run tests
         run: cargo test --verbose --all --all-features
 

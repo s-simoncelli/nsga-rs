@@ -1,9 +1,12 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 /// Whether the objective should be minimised or maximised. Default is minimise.
 #[derive(Default, Clone, Copy, Debug, PartialOrd, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", pyclass(eq, eq_int))]
 pub enum ObjectiveDirection {
     #[default]
     /// Minimise an objective.
@@ -21,6 +24,18 @@ impl Display for ObjectiveDirection {
     }
 }
 
+#[cfg(feature = "python")]
+#[pymethods]
+impl ObjectiveDirection {
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!("ObjectiveDirection({self})",))
+    }
+
+    pub fn __str__(&self) -> String {
+        self.__repr__().unwrap()
+    }
+}
+
 /// Define a problem objective to minimise or maximise.
 ///
 /// # Example
@@ -31,6 +46,7 @@ impl Display for ObjectiveDirection {
 ///  println!("{}", o);
 /// ```
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "python", pyclass(get_all))]
 pub struct Objective {
     /// The objective name.
     name: String,
@@ -72,5 +88,20 @@ impl Objective {
 impl Display for Objective {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Objective '{}' is {}", self.name, self.direction)
+    }
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl Objective {
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!(
+            "Objective(name='{}', direction='{}')",
+            self.name, self.direction
+        ))
+    }
+
+    pub fn __str__(&self) -> String {
+        self.__repr__().unwrap()
     }
 }

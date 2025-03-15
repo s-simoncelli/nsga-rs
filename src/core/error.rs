@@ -1,6 +1,10 @@
 use std::path::PathBuf;
-
 use thiserror::Error;
+
+#[cfg(feature = "python")]
+use pyo3::exceptions::PyValueError;
+#[cfg(feature = "python")]
+use pyo3::PyErr;
 
 #[derive(Error, Debug)]
 /// Errors raised by the library.
@@ -53,4 +57,11 @@ pub enum OError {
     NaN(String, String),
     #[error("The following error occurred for file '{0}': {1}")]
     File(PathBuf, String),
+}
+
+#[cfg(feature = "python")]
+impl From<OError> for PyErr {
+    fn from(value: OError) -> Self {
+        PyValueError::new_err(value.to_string())
+    }
 }

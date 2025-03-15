@@ -1,11 +1,13 @@
-use std::fmt;
-use std::fmt::{Debug, Display, Formatter};
-use std::sync::Arc;
-
 use rand::distr::uniform::SampleUniform;
 use rand::prelude::{IndexedRandom, IteratorRandom};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::fmt::{Debug, Display, Formatter};
+use std::sync::Arc;
+
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use crate::core::{OError, Problem};
 
@@ -22,6 +24,7 @@ impl<T: SampleUniform + PartialOrd + Display + Clone> BoundedNumberTrait for T {
 
 /// A variable between a lower and upper bound.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(IntoPyObject))]
 pub struct BoundedNumber<N: BoundedNumberTrait> {
     /// The variable name
     name: String,
@@ -102,6 +105,7 @@ impl<N: BoundedNumberTrait> Display for BoundedNumber<N> {
 
 /// A boolean variable.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(IntoPyObject))]
 pub struct Boolean {
     /// The variable name.
     name: String,
@@ -142,6 +146,7 @@ impl Variable<bool> for Boolean {
 
 /// A variable choice.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(IntoPyObject))]
 pub struct Choice {
     /// The variable name.
     name: String,
@@ -188,6 +193,7 @@ impl Variable<String> for Choice {
 /// The types of variables to set on a problem.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
+#[cfg_attr(feature = "python", derive(IntoPyObject))]
 pub enum VariableType {
     /// A continuous bounded variable (f64)
     Real(BoundedNumber<f64>),
@@ -263,6 +269,7 @@ impl Display for VariableType {
 
 /// The value of a variable to set on an individual.
 #[derive(Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", pyclass, derive(IntoPyObjectRef))]
 #[serde(untagged)]
 pub enum VariableValue {
     /// The value for a floating-point number. This is a f64.
@@ -343,5 +350,96 @@ impl Debug for VariableValue {
             VariableValue::Choice(v) => write!(f, "{v}")?,
         };
         Ok(())
+    }
+}
+
+/// Python classes to handle Rust variables with generics.
+#[cfg(feature = "python")]
+#[pyclass(name = "VariableType", eq, eq_int)]
+#[derive(Clone, PartialEq)]
+pub enum PyVariableType {
+    Real,
+    Integer,
+    Boolean,
+    Choice,
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl PyVariableType {
+    pub fn __repr__(&self) -> String {
+        let label = match &self {
+            PyVariableType::Real => "real",
+            PyVariableType::Integer => "integer",
+            PyVariableType::Boolean => "boolean",
+            PyVariableType::Choice => "choice",
+        };
+        label.to_string()
+    }
+
+    pub fn __str__(&self) -> String {
+        self.__repr__()
+    }
+}
+
+/// Python class holding the data for a problem variable.
+#[cfg(feature = "python")]
+#[pyclass(get_all, name = "Variable")]
+pub struct PyVariable {
+    /// The variable name,
+    name: String,
+    /// The type of variable.
+    var_type: PyVariableType,
+    /// The optional lower bound.
+    min_value: Option<f64>,
+    /// The optional upper bound.
+    max_value: Option<f64>,
+}
+
+/// Convert `&VariableType` to `PyVariable`
+#[cfg(feature = "python")]
+impl From<&VariableType> for PyVariable {
+    fn from(value: &VariableType) -> Self {
+        let var_type = match value {
+            VariableType::Real(_) => PyVariableType::Real,
+            VariableType::Integer(_) => PyVariableType::Integer,
+            VariableType::Boolean(_) => PyVariableType::Boolean,
+            VariableType::Choice(_) => PyVariableType::Choice,
+        };
+        let (min_value, max_value) = match value {
+            VariableType::Real(n) => (Some(n.min_value()), Some(n.max_value())),
+            VariableType::Integer(n) => (Some(n.min_value() as f64), Some(n.max_value() as f64)),
+            VariableType::Boolean(_) => (None, None),
+            VariableType::Choice(_) => (None, None),
+        };
+
+        PyVariable {
+            name: value.name(),
+            var_type,
+            min_value,
+            max_value,
+        }
+    }
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl PyVariable {
+    pub fn __repr__(&self) -> PyResult<String> {
+        let args = if let (Some(min_value), Some(max_value)) = (self.min_value, self.max_value) {
+            format!(", min-value={min_value}, max_value={max_value}")
+        } else {
+            String::from("")
+        };
+
+        Ok(format!(
+            "Variable(name='{}', type='{}'{args})",
+            self.name,
+            self.var_type.__repr__()
+        ))
+    }
+
+    pub fn __str__(&self) -> String {
+        self.__repr__().unwrap()
     }
 }

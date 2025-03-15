@@ -16,11 +16,16 @@ use crate::operators::{
 };
 use crate::utils::{argsort, fast_non_dominated_sort, vector_max, vector_min, Sort};
 
+// use crate::algorithms::stopping_condition::{PyStoppingConditionType};
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
 /// The data key where the crowding distance is stored for each [`Individual`].
 const CROWDING_DIST_KEY: &str = "crowding_distance";
 
 /// Input arguments for the NSGA2 algorithm.
 #[as_algorithm_args]
+#[cfg_attr(feature = "python", pyclass(get_all))]
 pub struct NSGA2Arg {
     /// The number of individuals to use in the population. This must be a multiple of `2`.
     pub number_of_individuals: usize,
@@ -45,6 +50,45 @@ pub struct NSGA2Arg {
     /// mutation) and, as such, may lead to slightly different solutions. The seed is randomly
     /// picked if this is `None`.
     pub seed: Option<u64>,
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl NSGA2Arg {
+    #[new]
+    #[pyo3(signature = (number_of_individuals, stopping_condition, crossover_operator_options=None, mutation_operator_options=None, resume_from_file=None, parallel=None, export_history=None, seed=None))]
+    fn py_new(
+        number_of_individuals: usize,
+        stopping_condition: StoppingCondition,
+        crossover_operator_options: Option<SimulatedBinaryCrossoverArgs>,
+        mutation_operator_options: Option<PolynomialMutationArgs>,
+        resume_from_file: Option<PathBuf>,
+        parallel: Option<bool>,
+        export_history: Option<ExportHistory>,
+        seed: Option<u64>,
+    ) -> PyResult<Self> {
+        Ok(NSGA2Arg {
+            number_of_individuals,
+            crossover_operator_options,
+            mutation_operator_options,
+            resume_from_file,
+            seed,
+            stopping_condition,
+            parallel,
+            export_history,
+        })
+    }
+
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!(
+            "NSGA2Arg(number_of_individuals={}, stopping_condition={})",
+            self.number_of_individuals, self.stopping_condition
+        ))
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__().unwrap()
+    }
 }
 
 /// The Non-dominated Sorting Genetic Algorithm (NSGA2).
@@ -646,9 +690,7 @@ mod test_sorting {
 mod test_problems {
     use optirustic_macros::test_with_retries;
 
-    use crate::algorithms::{
-        Algorithm, MaxGenerationValue, NSGA2Arg, StoppingConditionType, NSGA2,
-    };
+    use crate::algorithms::{Algorithm, NSGA2Arg, StoppingCondition, NSGA2};
     use crate::core::builtin_problems::{
         SCHProblem, ZTD1Problem, ZTD2Problem, ZTD3Problem, ZTD4Problem,
     };
@@ -663,7 +705,7 @@ mod test_problems {
         let problem = SCHProblem::create().unwrap();
         let args = NSGA2Arg {
             number_of_individuals: 10,
-            stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(1000)),
+            stopping_condition: StoppingCondition::MaxGeneration(1000),
             crossover_operator_options: None,
             mutation_operator_options: None,
             parallel: Some(false),
@@ -691,7 +733,7 @@ mod test_problems {
         let problem = ZTD1Problem::create(number_of_individuals).unwrap();
         let args = NSGA2Arg {
             number_of_individuals,
-            stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(2500)),
+            stopping_condition: StoppingCondition::MaxGeneration(2500),
             crossover_operator_options: None,
             mutation_operator_options: None,
             parallel: Some(false),
@@ -738,7 +780,7 @@ mod test_problems {
         let problem = ZTD2Problem::create(number_of_individuals).unwrap();
         let args = NSGA2Arg {
             number_of_individuals,
-            stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(2500)),
+            stopping_condition: StoppingCondition::MaxGeneration(2500),
             crossover_operator_options: None,
             mutation_operator_options: None,
             parallel: Some(false),
@@ -790,7 +832,7 @@ mod test_problems {
         let problem = ZTD3Problem::create(number_of_individuals).unwrap();
         let args = NSGA2Arg {
             number_of_individuals,
-            stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(2500)),
+            stopping_condition: StoppingCondition::MaxGeneration(2500),
             crossover_operator_options: None,
             mutation_operator_options: None,
             parallel: Some(false),
@@ -841,7 +883,7 @@ mod test_problems {
         let number_of_individuals: usize = 10;
         let args = NSGA2Arg {
             number_of_individuals,
-            stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(3000)),
+            stopping_condition: StoppingCondition::MaxGeneration(3000),
             crossover_operator_options: None,
             mutation_operator_options: None,
             parallel: Some(false),
@@ -895,7 +937,7 @@ mod test_problems {
         let problem = ZTD4Problem::create(number_of_individuals).unwrap();
         let args = NSGA2Arg {
             number_of_individuals,
-            stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(1000)),
+            stopping_condition: StoppingCondition::MaxGeneration(1000),
             crossover_operator_options: None,
             mutation_operator_options: None,
             parallel: Some(false),

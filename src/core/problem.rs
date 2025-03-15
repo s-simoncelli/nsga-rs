@@ -1,12 +1,20 @@
+use crate::core::utils::dummy_evaluator;
+use crate::core::{Constraint, Individual, OError, Objective, ObjectiveDirection, VariableType};
+use crate::utils::has_unique_elements_by_key;
+
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "python")]
+use crate::core::PyVariable;
 
-use crate::core::utils::dummy_evaluator;
-use crate::core::{Constraint, Individual, OError, Objective, ObjectiveDirection, VariableType};
-use crate::utils::has_unique_elements_by_key;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
+#[cfg(feature = "python")]
+use pyo3::types::PyDict;
 
 /// The struct containing the results of the evaluation function. This is the output of
 /// [`Evaluator::evaluate`], the user-defined function should produce. When the algorithm generates
@@ -166,6 +174,7 @@ impl Display for Problem {
         )
     }
 }
+
 impl Problem {
     /// Initialise the problem.
     ///
@@ -391,7 +400,106 @@ impl Problem {
     }
 }
 
-/// Set table I in Deb et al. (2002)'s NSGA2 paper.
+/// Python interface for data held by [`Problem`]. This uses a separate class as some Rust struct
+/// cannot be directly converted into Python objects.
+#[cfg(feature = "python")]
+#[pyclass(name = "Problem", get_all)]
+#[derive(Clone)]
+pub struct PyProblem {
+    /// The vector og objectives.
+    pub objectives_list: Vec<(String, Objective)>,
+    /// The vector of constraints.
+    pub constraints_list: Vec<(String, Constraint)>,
+    /// The vector of Variables.
+    pub variables_list: Vec<(String, VariableType)>,
+    /// The list of problem constraint names.
+    pub constraint_names: Vec<String>,
+    /// The list of problem variable names.
+    pub variable_names: Vec<String>,
+    /// The list of problem objective names.
+    pub objective_names: Vec<String>,
+    /// The number of problem objectives.
+    pub number_of_objectives: usize,
+    /// The number of problem constraints.
+    pub number_of_constraints: usize,
+    /// The number of problem variables.
+    pub number_of_variables: usize,
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl PyProblem {
+    #[getter]
+    /// Get the variables as Python dictionary. The keys contain the variable name and the values
+    /// the corresponding variable value.
+    pub fn variables(&self) -> PyResult<Py<PyDict>> {
+        Python::with_gil(|py| {
+            let dict = PyDict::new(py);
+            for (name, var) in &self.variables_list {
+                let var: PyVariable = var.into();
+                dict.set_item(name.clone(), var)?;
+            }
+            Ok(dict.unbind())
+        })
+    }
+
+    #[getter]
+    /// Get the objectives as Python dictionary. The keys contain the objective name and the values
+    /// the corresponding objective value.
+    pub fn objectives(&self) -> PyResult<Py<PyDict>> {
+        Python::with_gil(|py| {
+            let dict = PyDict::new(py);
+            for (name, objective) in &self.objectives_list {
+                dict.set_item(name, objective.clone())?;
+            }
+            Ok(dict.unbind())
+        })
+    }
+
+    #[getter]
+    /// Get the constraints as Python dictionary. The keys contain the constraint name and the
+    /// values the corresponding constraint value.
+    pub fn constraints(&self) -> PyResult<Py<PyDict>> {
+        Python::with_gil(|py| {
+            let dict = PyDict::new(py);
+            for (name, constraint) in &self.constraints_list {
+                dict.set_item(name, constraint.clone())?;
+            }
+            Ok(dict.unbind())
+        })
+    }
+
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!(
+            "Problem(variables={}, objectives={}, constraints={})",
+            self.number_of_variables, self.number_of_objectives, self.number_of_constraints
+        ))
+    }
+
+    pub fn __str__(&self) -> String {
+        self.__repr__().unwrap()
+    }
+}
+
+/// Convert [`Problem`] to [`PyProblem`]
+#[cfg(feature = "python")]
+impl From<&Problem> for PyProblem {
+    fn from(p: &Problem) -> Self {
+        PyProblem {
+            variables_list: p.variables(),
+            objectives_list: p.objectives(),
+            constraints_list: p.constraints(),
+            constraint_names: p.constraint_names(),
+            variable_names: p.variable_names(),
+            objective_names: p.objective_names(),
+            number_of_objectives: p.number_of_objectives(),
+            number_of_constraints: p.number_of_constraints(),
+            number_of_variables: p.number_of_variables(),
+        }
+    }
+}
+
+/// Built-in problem used to test the algorithms. See table I in Deb et al. (2002)'s NSGA2 paper.
 pub mod builtin_problems {
     use std::collections::HashMap;
     use std::error::Error;

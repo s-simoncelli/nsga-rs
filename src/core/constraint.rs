@@ -1,9 +1,13 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 /// Operator used to check a bounded constraint
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PartialEq))]
+#[cfg_attr(feature = "python", pyclass(eq, eq_int))]
 pub enum RelationalOperator {
     /// Value must equal the constraint value
     EqualTo,
@@ -17,6 +21,18 @@ pub enum RelationalOperator {
     GreaterOrEqualTo,
     /// Value must be greater than the constraint value
     GreaterThan,
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl RelationalOperator {
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!("RelationalOperator({:?})", self))
+    }
+
+    pub fn __str__(&self) -> String {
+        self.__repr__().unwrap()
+    }
 }
 
 /// Define a constraint where a value is compared with a relational operator as follows:
@@ -36,6 +52,7 @@ pub enum RelationalOperator {
 ///   assert_eq!(c.is_met(3.11), false);
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", pyclass(get_all))]
 pub struct Constraint {
     /// The constraint name.
     name: String,
@@ -179,6 +196,21 @@ impl Display for Constraint {
             RelationalOperator::GreaterThan => ">",
         };
         f.write_fmt(format_args!("{} {} {}", self.name, sign, self.target))
+    }
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl Constraint {
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!(
+            "Constraint(name='{}', operator='{:?}', target={})",
+            self.name, self.operator, self.target
+        ))
+    }
+
+    pub fn __str__(&self) -> String {
+        self.__repr__().unwrap()
     }
 }
 

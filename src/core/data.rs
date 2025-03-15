@@ -1,12 +1,17 @@
-use std::collections::HashMap;
+use crate::core::OError;
+
+#[cfg(feature = "python")]
+use pyo3::IntoPyObject;
+#[cfg(feature = "python")]
+use pyo3::IntoPyObjectRef;
 
 use serde::{Deserialize, Serialize, Serializer};
-
-use crate::core::OError;
+use std::collections::HashMap;
 
 /// The data type and value that can be stored in an individual or algorithm..
 #[derive(Clone, Deserialize, Debug)]
 #[serde(untagged)]
+#[cfg_attr(feature = "python", derive(IntoPyObjectRef, IntoPyObject))]
 pub enum DataValue {
     /// The value for a floating-point number. This is a f64.
     Real(f64),

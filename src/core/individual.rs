@@ -1,9 +1,11 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::ops::RangeBounds;
 use std::sync::Arc;
 
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use crate::core::{DataValue, OError, Problem, VariableValue};
 use crate::utils::hasmap_eq_with_nans;
@@ -44,6 +46,7 @@ use crate::utils::hasmap_eq_with_nans;
 ///     Ok(())
 /// }
 /// ```
+#[cfg(not(feature = "python"))]
 #[derive(Debug, Clone)]
 pub struct Individual {
     /// The problem being solved
@@ -60,6 +63,33 @@ pub struct Individual {
     evaluated: bool,
     /// Additional numeric data to store for the individuals (such as crowding distance or rank)
     /// depending on the algorithm the individuals are derived from.
+    data: HashMap<String, DataValue>,
+}
+
+// Workaround to set pyo3 get on struct field as it does not work with cfg_attr macro
+#[cfg(feature = "python")]
+#[derive(Debug, Clone)]
+#[pyclass]
+pub struct Individual {
+    /// The problem being solved
+    problem: Arc<Problem>,
+    /// The value of the problem variables for the individual.
+    #[pyo3(get)]
+    variable_values: HashMap<String, VariableValue>,
+    /// The value of the constraints.
+    #[pyo3(get)]
+    constraint_values: HashMap<String, f64>,
+    /// The values of the objectives.
+    #[pyo3(get)]
+    objective_values: HashMap<String, f64>,
+    /// Whether the individual has been evaluated and the problem constraint and objective values
+    /// are available. When an individual is created with some variables after the population
+    /// evolves, constraints and objectives need to be evaluated using a user-defined function.
+    #[pyo3(get)]
+    evaluated: bool,
+    /// Additional numeric data to store for the individuals (such as crowding distance or rank)
+    /// depending on the algorithm the individuals are derived from.
+    #[pyo3(get)]
     data: HashMap<String, DataValue>,
 }
 
@@ -148,6 +178,34 @@ impl Individual {
     /// return `Arc<Problem>`
     pub fn problem(&self) -> Arc<Problem> {
         self.problem.clone()
+    }
+
+    /// Get the number stored in a real variable by name. This returns an error if the variable
+    /// name does not exist or the variable is not of type real.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: The variable name.
+    ///
+    /// returns: `Result<f64, OError>`
+    pub fn get_real_value(&self, name: &str) -> Result<f64, OError> {
+        self.get_variable_value(name)?
+            .as_real()
+            .map_err(|_| OError::WrongVariableTypeWithName(name.to_string(), "real".to_string()))
+    }
+
+    /// Get the number stored in an integer variable by name. This returns an error if the variable
+    /// name does not exist or the variable is not of type integer.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: The variable name.
+    ///
+    /// returns: `Result<i64, OError>`
+    pub fn get_integer_value(&self, name: &str) -> Result<i64, OError> {
+        self.get_variable_value(name)?
+            .as_integer()
+            .map_err(|_| OError::WrongVariableTypeWithName(name.to_string(), "integer".to_string()))
     }
 
     /// Clone an individual by preserving only its solutions.
@@ -242,18 +300,136 @@ impl Individual {
         Ok(())
     }
 
+    /// Ge the vector with the objective values for the individual and transform their value using
+    /// a closure. The size of the vector will equal the number of problem objectives.
+    ///
+    /// # Arguments
+    ///
+    /// * `transform`: The function to apply to transform each objective value. This function
+    ///    receives the objective value and its name.
+    ///
+    /// returns: `Result<Vec<f64>, OError>`
+    pub fn transform_objective_values<F: Fn(f64, String) -> Result<f64, OError>>(
+        &self,
+        transform: F,
+    ) -> Result<Vec<f64>, OError> {
+        self.problem
+            .objective_names()
+            .iter()
+            .map(|obj_name| {
+                let val = self.get_objective_value(obj_name)?;
+                transform(val, obj_name.clone())
+            })
+            .collect()
+    }
+
+    /// Check if the individual was evaluated.
+    ///
+    /// return: `bool`
+    pub fn is_evaluated(&self) -> bool {
+        self.evaluated
+    }
+
+    /// Set the individual as evaluated. This means that its constraints and objectives have been
+    /// calculated for its solution.
+    pub fn set_evaluated(&mut self) {
+        self.evaluated = true;
+    }
+
+    /// Store custom data on the individual.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: The name of the data.
+    /// * `value`: The value.
+    ///
+    /// returns: `()`.
+    pub fn set_data(&mut self, name: &str, value: DataValue) {
+        self.data.insert(name.to_string(), value);
+    }
+
+    /// Get a copy of the custom data set on the individual. This returns an error if no custom
+    /// data with the provided `name` is set on the individual.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: The name of the data.
+    ///
+    /// returns: `Result<DataValue, OError>`
+    pub fn get_data(&self, name: &str) -> Result<DataValue, OError> {
+        self.data
+            .get(name)
+            .cloned()
+            .ok_or(OError::WrongDataName(name.to_string()))
+    }
+
+    /// Export all the solution data (constraint and objective values, constraint violation and
+    /// feasibility).
+    ///
+    /// return: `IndividualExport`
+    pub fn serialise(&self) -> IndividualExport {
+        // invert maximised objective for user
+        let mut objective_values = self.objective_values.clone();
+        for name in self.problem.objective_names() {
+            match self.problem.is_objective_minimised(&name) {
+                Ok(is_minimised) => {
+                    if !is_minimised {
+                        *objective_values.get_mut(&name).unwrap() *= -1.0;
+                    }
+                }
+                Err(_) => continue,
+            }
+        }
+
+        IndividualExport {
+            constraint_values: self.constraint_values.clone(),
+            objective_values,
+            constraint_violation: self.constraint_violation(),
+            variable_values: self.variable_values.clone(),
+            is_feasible: self.is_feasible(),
+            evaluated: self.evaluated,
+            data: self.data.clone(),
+        }
+    }
+
+    /// Import the individual's objectives, variables and constraints.
+    ///
+    /// # Arguments
+    ///
+    /// * `data`: The data.
+    /// * `problem`: The problem being solved.
+    ///
+    /// returns: `Result<Individual, OError>`
+    pub fn deserialise(data: &IndividualExport, problem: Arc<Problem>) -> Result<Self, OError> {
+        let mut ind = Individual::new(problem.clone());
+
+        for (var_name, var_value) in data.variable_values.iter() {
+            ind.update_variable(var_name, var_value.clone())?;
+        }
+        for (obj_name, obj_value) in data.objective_values.iter() {
+            ind.update_objective(obj_name, *obj_value)?;
+        }
+        for (const_name, const_value) in data.constraint_values.iter() {
+            ind.update_constraint(const_name, *const_value)?;
+        }
+        ind.set_evaluated();
+        Ok(ind)
+    }
+}
+
+#[cfg_attr(feature = "python", pymethods)]
+impl Individual {
     /// Calculate the overall amount of violation of the solution constraints. This is a measure
     /// about how close (or far) the individual meets the constraints. If the solution is feasible,
     /// then the violation is 0.0. Otherwise, a positive number is returned.
     ///
     /// return: `f64`
     pub fn constraint_violation(&self) -> f64 {
-        return self
-            .problem
+        self.problem
             .constraints()
             .iter()
             .map(|(name, c)| c.constraint_violation(self.constraint_values[name]))
-            .sum();
+            .sum()
     }
 
     /// Return whether the solution meets all the problem constraints.
@@ -344,34 +520,6 @@ impl Individual {
         Ok(self.constraint_values[name])
     }
 
-    /// Get the number stored in a real variable by name. This returns an error if the variable
-    /// name does not exist or the variable is not of type real.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: The variable name.
-    ///
-    /// returns: `Result<f64, OError>`
-    pub fn get_real_value(&self, name: &str) -> Result<f64, OError> {
-        self.get_variable_value(name)?
-            .as_real()
-            .map_err(|_| OError::WrongVariableTypeWithName(name.to_string(), "real".to_string()))
-    }
-
-    /// Get the number stored in an integer variable by name. This returns an error if the variable
-    /// name does not exist or the variable is not of type integer.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: The variable name.
-    ///
-    /// returns: `Result<i64, OError>`
-    pub fn get_integer_value(&self, name: &str) -> Result<i64, OError> {
-        self.get_variable_value(name)?
-            .as_integer()
-            .map_err(|_| OError::WrongVariableTypeWithName(name.to_string(), "integer".to_string()))
-    }
-
     /// Get the objective value by name. This returns an error if the objective does not exist.
     ///
     /// # Arguments
@@ -390,7 +538,7 @@ impl Individual {
         Ok(self.objective_values[name])
     }
 
-    /// Ge the vector with the objective values for the individual. The size of the vector will
+    /// Get the vector with the objective values for the individual. The size of the vector will
     /// equal the number of problem objectives.
     ///
     /// returns: `Result<Vec<f64>, OError>`
@@ -402,127 +550,11 @@ impl Individual {
             .collect()
     }
 
-    /// Ge the vector with the objective values for the individual and transform their value using
-    /// a closure. The size of the vector will equal the number of problem objectives.
-    ///
-    /// # Arguments
-    ///
-    /// * `transform`: The function to apply to transform each objective value. This function
-    ///    receives the objective value and its name.
-    ///
-    /// returns: `Result<Vec<f64>, OError>`
-    pub fn transform_objective_values<F: Fn(f64, String) -> Result<f64, OError>>(
-        &self,
-        transform: F,
-    ) -> Result<Vec<f64>, OError> {
-        self.problem
-            .objective_names()
-            .iter()
-            .map(|obj_name| {
-                let val = self.get_objective_value(obj_name)?;
-                transform(val, obj_name.clone())
-            })
-            .collect()
-    }
-
-    /// Check if the individual was evaluated.
-    ///
-    /// return: `bool`
-    pub fn is_evaluated(&self) -> bool {
-        self.evaluated
-    }
-
-    /// Set the individual as evaluated. This means that its constraints and objectives have been
-    /// calculated for its solution.
-    pub fn set_evaluated(&mut self) {
-        self.evaluated = true;
-    }
-
     /// Get all the individual's data.
     ///
     /// returns: `HashMap<String, DataValue>`
     pub fn data(&self) -> HashMap<String, DataValue> {
         self.data.clone()
-    }
-
-    /// Store custom data on the individual.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: The name of the data.
-    /// * `value`: The value.
-    ///
-    /// returns: `()`.
-    pub fn set_data(&mut self, name: &str, value: DataValue) {
-        self.data.insert(name.to_string(), value);
-    }
-
-    /// Get a copy of the custom data set on the individual. This returns an error if no custom
-    /// data with the provided `name` is set on the individual.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: The name of the data.
-    ///
-    /// returns: `Result<DataValue, OError>`
-    pub fn get_data(&self, name: &str) -> Result<DataValue, OError> {
-        self.data
-            .get(name)
-            .cloned()
-            .ok_or(OError::WrongDataName(name.to_string()))
-    }
-
-    /// Export all the solution data (constraint and objective values, constraint violation and
-    /// feasibility).
-    ///
-    /// return: `IndividualExport`
-    pub fn serialise(&self) -> IndividualExport {
-        // invert maximised objective for user
-        let mut objective_values = self.objective_values.clone();
-        for name in self.problem.objective_names() {
-            match self.problem.is_objective_minimised(&name) {
-                Ok(is_minimised) => {
-                    if !is_minimised {
-                        *objective_values.get_mut(&name).unwrap() *= -1.0;
-                    }
-                }
-                Err(_) => continue,
-            }
-        }
-
-        IndividualExport {
-            constraint_values: self.constraint_values.clone(),
-            objective_values,
-            constraint_violation: self.constraint_violation(),
-            variable_values: self.variable_values.clone(),
-            is_feasible: self.is_feasible(),
-            evaluated: self.evaluated,
-            data: self.data.clone(),
-        }
-    }
-
-    /// Import the individual's objectives, variables and constraints.
-    ///
-    /// # Arguments
-    ///
-    /// * `data`: The data.
-    /// * `problem`: The problem being solved.
-    ///
-    /// returns: `Result<Individual, OError>`
-    pub fn deserialise(data: &IndividualExport, problem: Arc<Problem>) -> Result<Self, OError> {
-        let mut ind = Individual::new(problem.clone());
-
-        for (var_name, var_value) in data.variable_values.iter() {
-            ind.update_variable(var_name, var_value.clone())?;
-        }
-        for (obj_name, obj_value) in data.objective_values.iter() {
-            ind.update_objective(obj_name, *obj_value)?;
-        }
-        for (const_name, const_value) in data.constraint_values.iter() {
-            ind.update_constraint(const_name, *const_value)?;
-        }
-        ind.set_evaluated();
-        Ok(ind)
     }
 }
 

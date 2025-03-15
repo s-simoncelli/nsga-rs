@@ -1,11 +1,19 @@
 # Optirustic Py
 
-This is a Python package that let users import serialised data from JSON files
-exported with the `optirustic` crate. It lets you:
+This is a Python package that mainly let users import serialised data from JSON files
+exported with the `optirustic` crate.
+
+It lets you:
 
 - import data into Python classes for easy manipulation;
 - calculate the population hyper-volume;
 - plot 2D, 3D or parallel coordinate charts of the Pareto front.
+- initialise the configurations of genetic operators and algorithms from Python in case
+  someone wants to create a Python library that wraps this library along with a specific
+  optimisation problem.
+
+> NOTE: this pacage will not let you optimise a problem from Python, but a
+> dedicated Python wrapper can be create in Rust from a pre-defined problem.
 
 # Installation
 
@@ -133,4 +141,31 @@ ds = DasDarren1998(number_of_objectives=3, number_of_partitions=two_layers)
 points = ds.calculate()
 ds.plot(points)
 plt.show()
+```
+
+## Initialise an algorithm properties
+
+```python
+from optirustic import (
+    StoppingConditionValue,
+    StoppingCondition,
+    Algorithm,
+    NSGA2Arg,
+)
+
+# set the stopping condition at 300 seconds
+cond = StoppingConditionValue.max_duration(300)
+print(cond)
+
+# define the NSGA2 arguments
+args = NSGA2Arg(
+    number_of_individuals=10,
+    stopping_condition=StoppingCondition(condition=cond),
+)
+print(args)
+
+# define the algorithm to use in a Python wrapper
+algo = Algorithm.nsga2(args)
+print(algo)
+
 ```

@@ -12,6 +12,30 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = ["matplotlib~=3.9.2", "numpy~=2.0.1"]
+dev-dependencies = ["ruff", "maturin", "pytest"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
+
+[tool.ruff]
+exclude = [
+    ".env",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+]
+
+# Same as Black.
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["E", "F", "D", "ANN"]
+ignore = ["ANN204", "D203", "D205", "D404", "D212"]
+
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+docstring-code-format = true
+quote-style = "double"
+indent-style = "space"

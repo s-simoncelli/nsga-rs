@@ -141,7 +141,7 @@ pub struct HyperVolume;
 #[derive(Debug)]
 pub struct HyperVolumeFileData {
     /// The evolution number the metric was calculated for.
-    pub generation: usize,
+    pub generation: u32,
     /// The time when the file adn therefore the objectives were created.
     pub time: DateTime<Utc>,
     /// The hyper-volume value.
@@ -161,8 +161,8 @@ impl AllHyperVolumeFileData {
 
     /// Get all hyper-volume generations.
     ///
-    /// returns: `Vec<usize>`
-    pub fn generations(&self) -> Vec<usize> {
+    /// returns: `Vec<u32>`
+    pub fn generations(&self) -> Vec<u32> {
         self.0.iter().map(|s| s.generation).collect()
     }
 

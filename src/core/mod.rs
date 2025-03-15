@@ -12,7 +12,15 @@ mod error;
 mod individual;
 mod objective;
 mod problem;
-#[cfg(test)]
-pub(crate) mod test_utils;
 pub mod utils;
 mod variable;
+
+#[cfg(test)]
+pub(crate) mod test_utils;
+
+// Export Python only objects.
+#[cfg(feature = "python")]
+pub use variable::PyVariable;
+
+#[cfg(feature = "python")]
+pub use problem::PyProblem;
