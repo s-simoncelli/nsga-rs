@@ -12,7 +12,9 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = ["matplotlib~=3.9.2", "numpy~=2.0.1"]
-dev-dependencies = ["ruff", "maturin", "pytest"]
+
+[project.optional-dependencies]
+dev = ["ruff", "maturin", "pytest"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]

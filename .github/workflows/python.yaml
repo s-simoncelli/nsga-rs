@@ -48,7 +48,7 @@ jobs:
           manylinux: auto
       - name: Check Python syntax
         run: |
-          pip install .[dev]
+          pip install '.[dev]'
           ruff check
           ruff format
       # Run tests only in linux env
