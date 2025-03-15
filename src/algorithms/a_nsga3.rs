@@ -32,8 +32,7 @@ mod test_problems {
     use optirustic_macros::test_with_retries;
 
     use crate::algorithms::{
-        AdaptiveNSGA3, Algorithm, MaxGenerationValue, NSGA3Arg, Nsga3NumberOfIndividuals,
-        StoppingConditionType,
+        AdaptiveNSGA3, Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, StoppingCondition,
     };
     use crate::core::builtin_problems::DTLZ1Problem;
     use crate::core::test_utils::assert_approx_array_eq;
@@ -61,10 +60,11 @@ mod test_problems {
             number_of_partitions,
             crossover_operator_options: Some(crossover_operator_options),
             mutation_operator_options: Some(mutation_operator_options),
-            stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(400)),
+            stopping_condition: StoppingCondition::MaxGeneration(400),
             parallel: None,
             export_history: None,
             seed: Some(1),
+            resume_from_file: None,
         };
 
         let mut algo = AdaptiveNSGA3::new(problem, args).unwrap();

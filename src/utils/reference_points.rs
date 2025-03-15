@@ -1,7 +1,11 @@
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "python")]
+use pyo3::exceptions::PyValueError;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use crate::core::OError;
 
@@ -31,6 +35,7 @@ fn binomial_coefficient(mut n: u64, k: u64) -> u64 {
 
 /// Define the number of partitions for the two layers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "python", pyclass)]
 pub struct TwoLayerPartitions {
     /// This is the number of partitions to use in the boundary layer.
     pub boundary_layer: usize,
@@ -41,6 +46,32 @@ pub struct TwoLayerPartitions {
     pub scaling: Option<f64>,
 }
 
+#[cfg(feature = "python")]
+#[pymethods]
+impl TwoLayerPartitions {
+    /// Initialise the python class.
+    #[new]
+    #[pyo3(signature = (boundary_layer, inner_layer, scaling=None))]
+    fn new(boundary_layer: usize, inner_layer: usize, scaling: Option<f64>) -> Self {
+        TwoLayerPartitions {
+            boundary_layer,
+            inner_layer,
+            scaling,
+        }
+    }
+
+    fn __repr__(&self) -> PyResult<String> {
+        Ok(format!(
+            "TwoLayerPartitions(boundary_layer={}, inner_layer={}, scaling={:?})",
+            self.boundary_layer, self.inner_layer, self.scaling
+        ))
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__().unwrap()
+    }
+}
+
 /// Define the number of partitions to use to generate the reference points. You can create:
 ///  - 1 layer or set of points with a constant uniform gaps with [`NumberOfPartitions::OneLayer`].
 ///  - 2 layers of points with each layer having a different gap with [`NumberOfPartitions::TwoLayers`].
@@ -49,6 +80,7 @@ pub struct TwoLayerPartitions {
 ///    smaller number of reference points, (2) controlling the point density in the inner area and
 ///    (3) ensure a well-spaced point distribution.
 #[derive(Serialize, Clone, Deserialize, Debug)]
+#[cfg_attr(feature = "python", derive(FromPyObject, IntoPyObject))]
 pub enum NumberOfPartitions {
     /// Create only one layer of points by specifying the number of uniform gaps between two
     /// consecutive points along all objective axis on the hyper-plane.
@@ -74,6 +106,7 @@ pub enum NumberOfPartitions {
 /// ```rust
 #[doc = include_str!("../../examples/reference_points_2layers.rs")]
 /// ```
+#[cfg_attr(feature = "python", pyclass(name = "DasDarren1998", get_all))]
 pub struct DasDarren1998 {
     /// The number of problem objectives.
     number_of_objectives: usize,
@@ -292,6 +325,52 @@ impl DasDarren1998 {
         })?;
 
         Ok(())
+    }
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl DasDarren1998 {
+    #[new]
+    /// Initialise the class
+    pub fn py_new(
+        number_of_objectives: usize,
+        number_of_partitions: NumberOfPartitions,
+    ) -> PyResult<Self> {
+        Ok(Self {
+            number_of_objectives,
+            number_of_partitions,
+        })
+    }
+
+    /// Calculate the vector of points.
+    ///
+    /// returns: `PyResult<Vec<Vec<f64>>>`.
+    pub fn calculate(&self) -> PyResult<Vec<Vec<f64>>> {
+        let number_of_partitions = match &self.number_of_partitions {
+            NumberOfPartitions::OneLayer(n) => NumberOfPartitions::OneLayer(*n),
+            NumberOfPartitions::TwoLayers(data) => {
+                NumberOfPartitions::TwoLayers(TwoLayerPartitions {
+                    boundary_layer: data.boundary_layer,
+                    inner_layer: data.inner_layer,
+                    scaling: data.scaling,
+                })
+            }
+        };
+        let ds = DasDarren1998::new(self.number_of_objectives, &number_of_partitions)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(ds.get_weights())
+    }
+
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!(
+            "DasDarren1998(number_of_objectives={}, number_of_partitions={:?})",
+            self.number_of_objectives, self.number_of_partitions
+        ))
+    }
+
+    pub fn __str__(&self) -> String {
+        self.__repr__().unwrap()
     }
 }
 

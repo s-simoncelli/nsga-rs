@@ -4,9 +4,7 @@ use std::path::PathBuf;
 
 use log::LevelFilter;
 
-use optirustic::algorithms::{
-    Algorithm, MaxGenerationValue, NSGA2Arg, StoppingConditionType, NSGA2,
-};
+use optirustic::algorithms::{Algorithm, NSGA2Arg, StoppingCondition, NSGA2};
 use optirustic::core::builtin_problems::SCHProblem;
 
 /// Solve the Schaffer’s problem (SCH) where the following 2 objectives are minimised:
@@ -30,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args = NSGA2Arg {
         // use 100 individuals and stop the algorithm at 250 generations
         number_of_individuals: 100,
-        stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(250)),
+        stopping_condition: StoppingCondition::MaxGeneration(250),
         // use default options for the SBX and PM operators
         crossover_operator_options: None,
         mutation_operator_options: None,

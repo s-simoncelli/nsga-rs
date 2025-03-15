@@ -4,9 +4,7 @@ use std::path::PathBuf;
 
 use log::LevelFilter;
 
-use optirustic::algorithms::{
-    Algorithm, MaxGenerationValue, NSGA2Arg, StoppingConditionType, NSGA2,
-};
+use optirustic::algorithms::{Algorithm, NSGA2Arg, StoppingCondition, NSGA2};
 use optirustic::core::builtin_problems::ZTD1Problem;
 
 /// Solve the ZDT1 problem (SCH) where the following 2 objectives are minimised:
@@ -31,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Setup and run the NSGA2 algorithm
     let args = NSGA2Arg {
         number_of_individuals,
-        stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(1000)),
+        stopping_condition: StoppingCondition::MaxGeneration(1000),
         // use default options for the SBX and PM operators
         crossover_operator_options: None,
         mutation_operator_options: None,

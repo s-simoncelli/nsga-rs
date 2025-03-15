@@ -1,11 +1,9 @@
+use log::{debug, info, warn};
+use rand::RngCore;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Rem;
-
-use log::{debug, info, warn};
-use rand::RngCore;
-
-use optirustic_macros::{as_algorithm, as_algorithm_args, impl_algorithm_trait_items};
+use std::path::PathBuf;
 
 use crate::algorithms::nsga3::adaptive_ref_points::AdaptiveReferencePoints;
 use crate::algorithms::nsga3::associate::AssociateToRefPoint;
@@ -19,6 +17,14 @@ use crate::operators::{
     Selector, SimulatedBinaryCrossover, SimulatedBinaryCrossoverArgs, TournamentSelector,
 };
 use crate::utils::{fast_non_dominated_sort, DasDarren1998, NumberOfPartitions};
+use optirustic_macros::{as_algorithm, as_algorithm_args, impl_algorithm_trait_items};
+
+#[cfg(feature = "python")]
+use pyo3::exceptions::PyTypeError;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+#[cfg(feature = "python")]
+use pyo3::IntoPyObjectExt;
 
 mod adaptive_ref_points;
 mod associate;
@@ -47,8 +53,39 @@ pub enum Nsga3NumberOfIndividuals {
     Custom(usize),
 }
 
+/// Convert a python object to `Nsga3NumberOfIndividuals`.
+#[cfg(feature = "python")]
+impl FromPyObject<'_> for Nsga3NumberOfIndividuals {
+    fn extract_bound(obj: &Bound<'_, PyAny>) -> PyResult<Self> {
+        if obj.is_none() {
+            Ok(Nsga3NumberOfIndividuals::EqualToReferencePointCount)
+        } else if let Ok(x) = obj.extract::<usize>() {
+            Ok(Nsga3NumberOfIndividuals::Custom(x))
+        } else {
+            Err(PyTypeError::new_err("Invalid type".to_string()))
+        }
+    }
+}
+
+/// Convert `Nsga3NumberOfIndividuals` to PyObject to enable getter in `NSGA3Arg`.
+#[cfg(feature = "python")]
+impl<'py> IntoPyObject<'py> for Nsga3NumberOfIndividuals {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        let py_obj = match self {
+            Nsga3NumberOfIndividuals::EqualToReferencePointCount => py.None().into_bound_py_any(py),
+            Nsga3NumberOfIndividuals::Custom(total) => total.into_bound_py_any(py),
+        };
+        py_obj
+    }
+}
+
 /// Input arguments for the NSGA3 algorithm.
 #[as_algorithm_args]
+#[cfg_attr(feature = "python", pyclass(get_all))]
 pub struct NSGA3Arg {
     /// The number of individuals in the population.
     pub number_of_individuals: Nsga3NumberOfIndividuals,
@@ -68,12 +105,60 @@ pub struct NSGA3Arg {
     /// divided by the number of real variables in the problem (i.e., each variable will have the
     /// same probability of being mutated).
     pub mutation_operator_options: Option<PolynomialMutationArgs>,
+    /// Instead of initialising the population with random variables, see the initial population
+    /// with  the variable values from a JSON files exported with this tool. This option lets you
+    /// restart the evolution from a previous generation; you can use any history file (exported
+    /// when the field `export_history`) or the file exported when the stopping condition was reached.
+    pub resume_from_file: Option<PathBuf>,
     /// The seed used in the random number generator (RNG). You can specify a seed in case you want
     /// to try to reproduce results. NSGA2 is a stochastic algorithm that relies on an RNG at
     /// different steps (when population is initially generated, during selection, crossover and
     /// mutation) and, as such, may lead to slightly different solutions. The seed is randomly
     /// picked if this is `None`.
     pub seed: Option<u64>,
+}
+
+/// Initialise the `NSGA3Arg` as python class.
+#[cfg(feature = "python")]
+#[pymethods]
+impl NSGA3Arg {
+    #[new]
+    #[pyo3(signature = (number_of_individuals, number_of_partitions, stopping_condition, crossover_operator_options=None, mutation_operator_options=None, resume_from_file=None, parallel=None, export_history=None, seed=None))]
+    fn py_new(
+        number_of_individuals: PyObject,
+        number_of_partitions: NumberOfPartitions,
+        stopping_condition: StoppingCondition,
+        crossover_operator_options: Option<SimulatedBinaryCrossoverArgs>,
+        mutation_operator_options: Option<PolynomialMutationArgs>,
+        resume_from_file: Option<PathBuf>,
+        parallel: Option<bool>,
+        export_history: Option<ExportHistory>,
+        seed: Option<u64>,
+    ) -> PyResult<Self> {
+        let number_of_individuals = Python::with_gil(|py| number_of_individuals.extract(py))?;
+        Ok(NSGA3Arg {
+            number_of_individuals,
+            number_of_partitions,
+            crossover_operator_options,
+            mutation_operator_options,
+            seed,
+            stopping_condition,
+            resume_from_file,
+            parallel,
+            export_history,
+        })
+    }
+
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!(
+            "NSGA3Arg(number_of_individuals={:?}, number_of_partitions={:?}, stopping_condition={})",
+            self.number_of_individuals, self.number_of_partitions, self.stopping_condition
+        ))
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__().unwrap()
+    }
 }
 
 /// The Non-dominated Sorting Genetic Algorithm (NSGA3).
@@ -196,8 +281,18 @@ impl NSGA3 {
         }
 
         let problem = Arc::new(problem);
-        let population = Population::init(problem.clone(), number_of_individuals);
-        info!("Created initial random population");
+        let population = if let Some(init_file) = options.resume_from_file {
+            info!("Loading initial population from {:?}", init_file);
+            NSGA3::seed_population_from_file(
+                problem.clone(),
+                &name,
+                number_of_individuals,
+                &init_file,
+            )?
+        } else {
+            info!("Created initial random population");
+            Population::init(problem.clone(), number_of_individuals)
+        };
 
         let selector_operator = TournamentSelector::<ParetoConstrainedDominance>::new(2);
         let mutation_options = match options.mutation_operator_options {
@@ -475,8 +570,7 @@ mod test_problems {
     use optirustic_macros::test_with_retries;
 
     use crate::algorithms::{
-        Algorithm, MaxGenerationValue, NSGA3Arg, Nsga3NumberOfIndividuals, StoppingConditionType,
-        NSGA3,
+        Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, StoppingCondition, NSGA3,
     };
     use crate::core::builtin_problems::{DTLZ1Problem, DTLZ2Problem};
     use crate::core::test_utils::{assert_approx_array_eq, check_value_in_range};
@@ -484,7 +578,7 @@ mod test_problems {
     use crate::utils::{NumberOfPartitions, TwoLayerPartitions};
 
     /// Test the DTLZ1 problem from Deb et al. (2013)
-    fn test_dtlz1(number_objectives: usize, max_gen: usize) {
+    fn test_dtlz1(number_objectives: usize, max_gen: u32) {
         // see Table I
         let k: usize = 5;
         let number_variables: usize = number_objectives + k - 1; // M + k - 1 with k = 5 (Section Va)
@@ -540,8 +634,9 @@ mod test_problems {
             crossover_operator_options: Some(crossover_operator_options),
             mutation_operator_options: Some(mutation_operator_options),
             // see Table III
-            stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(max_gen)),
+            stopping_condition: StoppingCondition::MaxGeneration(max_gen),
             parallel: None,
+            resume_from_file: None,
             export_history: None,
             seed: Some(1),
         };
@@ -639,7 +734,8 @@ mod test_problems {
             crossover_operator_options: Some(crossover_operator_options),
             mutation_operator_options: Some(mutation_operator_options),
             // see Table III
-            stopping_condition: StoppingConditionType::MaxGeneration(MaxGenerationValue(400)),
+            stopping_condition: StoppingCondition::MaxGeneration(400),
+            resume_from_file: None,
             parallel: None,
             export_history: None,
             seed: Some(1),

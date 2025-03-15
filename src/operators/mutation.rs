@@ -1,6 +1,9 @@
 use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
 use crate::core::{Individual, OError, Problem, VariableType, VariableValue};
 
 /// The trait to implement a mutation operator to modify the genetic material of an individual.
@@ -21,6 +24,7 @@ pub trait Mutation {
 }
 
 /// Input arguments for [`PolynomialMutation`].
+#[cfg_attr(feature = "python", pyclass(get_all))]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PolynomialMutationArgs {
     /// A user-defined parameter to control the mutation. This is eta_m in the paper, and it is
@@ -52,6 +56,30 @@ impl PolynomialMutationArgs {
             index_parameter: 20.0,
             variable_probability,
         }
+    }
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl PolynomialMutationArgs {
+    #[new]
+    #[pyo3(signature = (variable_probability, index_parameter=None))]
+    fn new(variable_probability: f64, index_parameter: Option<f64>) -> Self {
+        PolynomialMutationArgs {
+            index_parameter: index_parameter.unwrap_or(20.0),
+            variable_probability,
+        }
+    }
+
+    pub fn __repr__(&self) -> PyResult<String> {
+        Ok(format!(
+            "PolynomialMutationArgs(index_parameter={}, variable_probability={})",
+            self.index_parameter, self.variable_probability
+        ))
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__().unwrap()
     }
 }
 

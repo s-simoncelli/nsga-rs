@@ -40,7 +40,7 @@ pub fn test_with_retries(attrs: TokenStream, item: TokenStream) -> TokenStream {
 /// Register new fields on a struct that contains algorithm options. This macro adds:
 ///  - the Serialize, Deserialize, Clone traits to the structure to make it serialisable and
 ///    de-serialisable.
-///  - add the following fields: stopping_condition (`StoppingConditionType`), parallel (`bool`)
+///  - add the following fields: stopping_condition (`StoppingCondition`), parallel (`bool`)
 ///    and export_history (`Option<ExportHistory>`).
 #[proc_macro_attribute]
 pub fn as_algorithm_args(_attrs: TokenStream, input: TokenStream) -> TokenStream {
@@ -52,7 +52,7 @@ pub fn as_algorithm_args(_attrs: TokenStream, input: TokenStream) -> TokenStream
                     syn::Field::parse_named
                         .parse2(quote! {
                             /// The condition to use when to terminate the algorithm.
-                            pub stopping_condition: StoppingConditionType
+                            pub stopping_condition: StoppingCondition
                         })
                         .expect("Cannot add `stopping_condition` field"),
                 );
@@ -79,7 +79,7 @@ pub fn as_algorithm_args(_attrs: TokenStream, input: TokenStream) -> TokenStream
             }
 
             let expand = quote! {
-                use crate::algorithms::{StoppingConditionType, ExportHistory};
+                use crate::algorithms::{StoppingCondition, ExportHistory};
                 use serde::{Deserialize, Serialize};
 
                 #[derive(Serialize, Deserialize, Clone)]
@@ -92,8 +92,8 @@ pub fn as_algorithm_args(_attrs: TokenStream, input: TokenStream) -> TokenStream
 }
 
 /// This macro adds the following private fields to the struct defining an algorithm:
-/// `problem`, `number_of_individuals`, `population`, `generation`,`stopping_condition`, `number_of_function_evaluations`,
-/// `start_time`, `export_history` and `parallel`.
+/// `problem`, `number_of_individuals`, `population`, `generation`,`stopping_condition`,
+/// `number_of_function_evaluations`, `start_time`, `export_history` and `parallel`.
 ///
 /// It also implements the `Display` trait.
 ///
@@ -137,7 +137,7 @@ pub fn as_algorithm(attrs: TokenStream, input: TokenStream) -> TokenStream {
                     syn::Field::parse_named
                         .parse2(quote! {
                             /// The evolution step.
-                            generation: usize
+                            generation: u32
                         })
                         .expect("Cannot add `generation` field"),
                 );
@@ -145,7 +145,7 @@ pub fn as_algorithm(attrs: TokenStream, input: TokenStream) -> TokenStream {
                     syn::Field::parse_named
                         .parse2(quote! {
                             /// The number of function evaluations.
-                            nfe: usize
+                            nfe: u32
                         })
                         .expect("Cannot add `nfe` field"),
                 );
@@ -153,7 +153,7 @@ pub fn as_algorithm(attrs: TokenStream, input: TokenStream) -> TokenStream {
                     syn::Field::parse_named
                         .parse2(quote! {
                              /// The stopping condition.
-                            stopping_condition: StoppingConditionType
+                            stopping_condition: StoppingCondition
                         })
                         .expect("Cannot add `stopping_condition` field"),
                 );
@@ -230,7 +230,7 @@ pub fn impl_algorithm_trait_items(attrs: TokenStream, input: TokenStream) -> Tok
     let mut new_items = vec![
         syn::parse::<syn::ImplItem>(
             quote!(
-                fn stopping_condition(&self) -> &StoppingConditionType {
+                fn stopping_condition(&self) -> &StoppingCondition {
                     &self.stopping_condition
                 }
             )
@@ -284,7 +284,7 @@ pub fn impl_algorithm_trait_items(attrs: TokenStream, input: TokenStream) -> Tok
         .expect("Failed to parse `export_history` item"),
         syn::parse::<syn::ImplItem>(
             quote!(
-                fn generation(&self) -> usize {
+                fn generation(&self) -> u32 {
                     self.generation
                 }
             )
@@ -293,7 +293,7 @@ pub fn impl_algorithm_trait_items(attrs: TokenStream, input: TokenStream) -> Tok
         .expect("Failed to parse `generation` item"),
         syn::parse::<syn::ImplItem>(
             quote!(
-                fn number_of_function_evaluations(&self) -> usize {
+                fn number_of_function_evaluations(&self) -> u32 {
                     self.nfe
                 }
             )

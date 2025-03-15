@@ -1,3 +1,5 @@
+"""This file contains utility functions to plot the optimisation results."""
+
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -66,7 +68,16 @@ def plot_parallel(
     algorithm: str,
     generation: int,
     pop_size: int,
-):
+) -> plt.Figure:
+    """
+    Generate a parallel axis chart for a multi-objective problem.
+    :param objectives: A dictionary containing the objective name as ey and their
+    values as list.
+    :param algorithm: The name of the used algorithm.
+    :param generation: The degeneration number.
+    :param pop_size: The number of individuals in the population.
+    :return: The Figure object..
+    """
     names = list(objectives.keys())
     values = list(objectives.values())
     fig = parallel_coordinate_plot(values, names)
@@ -81,7 +92,7 @@ def plot_parallel(
 def parallel_coordinate_plot(
     data: list[list[float]],
     objective_names: list[str],
-    color="red",
+    color: str = "red",
 ) -> plt.Figure:
     """
     Render a parallel coordinate plot. This code was edited from
@@ -180,6 +191,13 @@ def plot_convergence(generations: list[int], values: list[float]) -> plt.Figure:
 
 
 def plot_reference_points(reference_points: list[list[float]]) -> plt.Figure:
+    """
+    Plot the reference points.
+    :param reference_points: The list of reference point coordinates. This list has size
+    equal to the nuber of reference point. Each sub-list is a point whose size
+    corresponds to the number of objectives.
+    :return: The Figure object.
+    """
     if len(reference_points) == 0:
         raise ValueError("The reference point vector is empty")
 
@@ -206,6 +224,6 @@ def plot_reference_points(reference_points: list[list[float]]) -> plt.Figure:
         parallel_coordinate_plot(reference_points, names, "black")
 
     plt.title(
-        "Reference points - Das & Darren (2019)\n" f"{number_of_objectives} objectives"
+        f"Reference points - Das & Darren (2019)\n{number_of_objectives} objectives"
     )
     return fig
