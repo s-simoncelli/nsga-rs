@@ -48,12 +48,12 @@ jobs:
           manylinux: auto
       - name: Check Python syntax
         run: |
+          pip install .[dev]
           ruff check
           ruff format
       # Run tests only in linux env
       - name: Test Python API
         run: |
-          pip install .[dev]
           pip install optirustic --find-links dist --force-reinstall
           python -m pytest optirustic-py/tests/test_api.py
       - name: Upload wheels
