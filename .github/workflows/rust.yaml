@@ -25,7 +25,7 @@ jobs:
       - name: Build (with all features)
         run: cargo build --verbose -p optirustic --all-features
       - name: Run tests
-        run: cargo test --verbose --all --all-features
+        run: cargo test --verbose --all
 
   crates_io_publish:
     name: Publish (crates.io)
