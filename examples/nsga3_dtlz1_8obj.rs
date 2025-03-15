@@ -51,6 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         parallel: None,
         export_history: None,
         seed: Some(1),
+        resume_from_file: None,
     };
 
     // Initialise the algorithm
