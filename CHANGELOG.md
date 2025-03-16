@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Bumped optirustic-macro package version to publish new version on crates.io
+
 ## 1.2.0
 
 - Added `python` feature to enable Python API. This allows any user to build
