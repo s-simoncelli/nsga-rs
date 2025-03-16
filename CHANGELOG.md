@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.2.0
+
+- Added `python` feature to enable Python API. This allows any user to build
+  a Rust-based Python library wrapper this genetic algorithm library and an optimisation
+  problem to solve.
+- The `optirustic` Python package on Pypi now offers more API to initialise the `StoppingCondition`,
+  `PolynomialMutationArgs`,
+  `SimulatedBinaryCrossoverArgs`, `ExportHistory`, `NSGA2Arg`, `NSGA3Arg` and `Algorithm` classes.
+
+## 1.1.3
+
+- Fixed SBX test with integer values by changing the seed number after rnf update. The old seed truncates the integers
+- Ensure that with integer values the crossover and mutation operators do not exceed the var upper bound. This might
+  have happened when the variable is selected close to its upper bound.
+
+## 1.1.2
+
+- Bumped dependency versions
+- Added `generation_step` and`destinatiion` methods in `Algorithm` trait to
+  get the current generation and the path where results are stored.
+
 ## 1.1.0
 
 - Added `number_of_function_evaluations` field in algorithms and serialised data. This fields
