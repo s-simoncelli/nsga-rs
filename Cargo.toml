@@ -30,7 +30,7 @@ thiserror = "2.0.11"
 rayon = "1.10.0"
 env_logger = "0.11.3"
 chrono = { version = "0.4.38", features = ["serde"] }
-optirustic-macros = { path = "libs/optirustic-macros", version = "1.0.0" }
+optirustic-macros = { path = "libs/optirustic-macros", version = "1.1.0" }
 hv-fonseca-et-al-2006-sys = { path = "libs/hv-fonseca-et-al-2006-sys", version = "2.0.2-rc.2" }
 nalgebra = "0.33.0"
 pyo3 = { version = "0.24.0", optional = true, features = ["extension-module"] }
