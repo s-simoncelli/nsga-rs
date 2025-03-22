@@ -4,6 +4,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
+
 class ObjectiveDirection(Enum):
     """A class describing the objective direction."""
 
@@ -11,6 +12,7 @@ class ObjectiveDirection(Enum):
     """ The objective is minimised """
     Maximise = "maximise"
     """ The objective is maximised """
+
 
 class Objective:
     """An objective set on the solved problem."""
@@ -20,10 +22,12 @@ class Objective:
     direction: ObjectiveDirection
     """ Whether the objective should be minimised or maximised. """
 
+
 class RelationalOperator(Enum):
     """Operator used to check a bounded constraint."""
 
     pass
+
 
 class Constraint:
     """A constraint set on the solved problem."""
@@ -36,6 +40,7 @@ class Constraint:
     target: float
     """ The constraint target """
 
+
 class Variable:
     """A variable set on the solved problem."""
 
@@ -47,6 +52,7 @@ class Variable:
     """ The minimum bound. This is None if the variable does not support bounds. """
     max_value: float | None
     """ The maximum bound. This is None if the variable does not support bounds. """
+
 
 class Problem:
     """Class holding information about the solved problem."""
@@ -74,8 +80,10 @@ class Problem:
     number_of_variables: int
     """ The number of variables. """
 
+
 type VariableType = float | int | bool | str
 type DataType = float | int | list[DataType] | dict[str, DataType]
+
 
 class Individual:
     """
@@ -169,6 +177,7 @@ class Individual:
         """
         ...
 
+
 class AlgorithmData:
     """Class holding the algorithm data."""
 
@@ -231,7 +240,7 @@ class AlgorithmData:
 
     @staticmethod
     def estimate_reference_point_from_files(
-        folder: str, offset: list[float | None]
+            folder: str, offset: list[float | None]
     ) -> list[float]:
         """
         Calculate a reference point by taking the maximum of each objective (or
@@ -262,7 +271,7 @@ class AlgorithmData:
 
     @staticmethod
     def convergence_data(
-        folder: str, reference_point: list[float]
+            folder: str, reference_point: list[float]
     ) -> tuple[list[int], list[datetime], list[float]]:
         """
         Calculate the hyper-volume at different generations (using the serialised
@@ -289,10 +298,12 @@ class AlgorithmData:
         :return: The figure object.
         """
 
+
 class NSGA2Data(AlgorithmData):
     """Class to parse data exported with the NSGA2 algorithm."""
 
     pass
+
 
 class NSGA3Data(AlgorithmData):
     """Class to parse data exported with the NSGA3 algorithm."""
@@ -304,6 +315,7 @@ class NSGA3Data(AlgorithmData):
         :param reference_points: The reference points.
         :return: The figure object.
         """
+
 
 class TwoLayerPartitions:
     """Define the number of partitions for the two layers."""
@@ -318,7 +330,7 @@ class TwoLayerPartitions:
     the boundary layer). """
 
     def __init__(
-        self, boundary_layer: int, inner_layer: int, scaling: float | None = None
+            self, boundary_layer: int, inner_layer: int, scaling: float | None = None
     ):
         """
         Initialise the class.
@@ -329,6 +341,7 @@ class TwoLayerPartitions:
         instead of 1 (as in the boundary layer).
         """
         ...
+
 
 class DasDarren1998:
     """
@@ -344,7 +357,7 @@ class DasDarren1998:
     with different spacing."""
 
     def __init__(
-        self, number_of_objectives: int, number_of_partitions: int | TwoLayerPartitions
+            self, number_of_objectives: int, number_of_partitions: int | TwoLayerPartitions
     ):
         """
         Derive the reference points or weights using the methodology suggested by
@@ -388,6 +401,7 @@ class DasDarren1998:
         """
         ...
 
+
 class StoppingConditionValue:
     """Class to use to define the stopping condition."""
 
@@ -399,11 +413,21 @@ class StoppingConditionValue:
         ...
 
     @classmethod
-    def max_duration(cls, duration: int) -> StoppingConditionValue:
+    def max_duration_as_minutes(cls, duration: int) -> StoppingConditionValue:
         """
         Initialise the stopping condition. This will stop the algorithm when the
-        elapsed time exceeds the given duration.
-        :param duration: The duration in seconds.
+        elapsed time exceeds the given duration in minutes.
+        :param duration: The duration in minutes.
+        :return: The StoppingConditionValue instance.
+        """
+        ...
+
+    @classmethod
+    def max_duration_as_hours(cls, duration: int) -> StoppingConditionValue:
+        """
+        Initialise the stopping condition. This will stop the algorithm when the
+        elapsed time exceeds the given duration in hours.
+        :param duration: The duration in hours.
         :return: The StoppingConditionValue instance.
         """
         ...
@@ -430,6 +454,7 @@ class StoppingConditionValue:
         """
         ...
 
+
 class StoppingCondition:
     """
     Define the stopping condition. This can be one conditions or multiple
@@ -437,7 +462,7 @@ class StoppingCondition:
     """
 
     def __init__(
-        self, condition: StoppingConditionValue | list[StoppingConditionValue]
+            self, condition: StoppingConditionValue | list[StoppingConditionValue]
     ):
         """
         Initialise the class.
@@ -453,6 +478,7 @@ class StoppingCondition:
         """
         ...
 
+
 class PolynomialMutationArgs:
     """The Polynomial mutation (PM) operator options."""
 
@@ -462,7 +488,7 @@ class PolynomialMutationArgs:
     """The probability of mutating a parent variable."""
 
     def __init__(
-        self, variable_probability: float, index_parameter: float | None = None
+            self, variable_probability: float, index_parameter: float | None = None
     ):
         """
         Initialise the Polynomial mutation (PM) operator with the default parameters.
@@ -476,6 +502,7 @@ class PolynomialMutationArgs:
         """
         ...
 
+
 class SimulatedBinaryCrossoverArgs:
     """Inputs for the SimulatedBinaryCrossover."""
 
@@ -488,10 +515,10 @@ class SimulatedBinaryCrossoverArgs:
     crossover."""
 
     def __init__(
-        self,
-        distribution_index: float | None = None,
-        crossover_probability: float | None = None,
-        variable_probability: float | None = None,
+            self,
+            distribution_index: float | None = None,
+            crossover_probability: float | None = None,
+            variable_probability: float | None = None,
     ):
         """
         Initialise the argument class.
@@ -506,6 +533,7 @@ class SimulatedBinaryCrossoverArgs:
         parents is used in the crossover. The NSGA2 paper uses 0.5, meaning that  each
         variable in a solution has a 50% chance of changing its value.
         """
+
 
 class ExportHistory:
     """Configure the export of the algorithm history."""
@@ -525,6 +553,7 @@ class ExportHistory:
         JSON file in the given folder.
         """
         ...
+
 
 class NSGA2Arg:
     """Customise the NSGA2 options."""
@@ -547,15 +576,15 @@ class NSGA2Arg:
     """The seed used in the random number generator (RNG)."""
 
     def __init__(
-        self,
-        number_of_individuals: int,
-        stopping_condition: StoppingCondition,
-        crossover_operator_options: SimulatedBinaryCrossoverArgs | None = None,
-        mutation_operator_options: PolynomialMutationArgs | None = None,
-        resume_from_file: Path | None = None,
-        parallel: bool | None = True,
-        export_history: ExportHistory | None = None,
-        seed: int | None = None,
+            self,
+            number_of_individuals: int,
+            stopping_condition: StoppingCondition,
+            crossover_operator_options: SimulatedBinaryCrossoverArgs | None = None,
+            mutation_operator_options: PolynomialMutationArgs | None = None,
+            resume_from_file: Path | None = None,
+            parallel: bool | None = True,
+            export_history: ExportHistory | None = None,
+            seed: int | None = None,
     ) -> None:
         """
         Input arguments for the NSGA2 algorithm.
@@ -590,6 +619,7 @@ class NSGA2Arg:
         slightly different solutions. The seed is randomly picked if this is `None`.
         """
 
+
 class NSGA3Arg:
     """Customise the NSGA2 options."""
 
@@ -613,16 +643,16 @@ class NSGA3Arg:
     """The seed used in the random number generator (RNG)."""
 
     def __init__(
-        self,
-        number_of_individuals: int | None,
-        number_of_partitions: int | TwoLayerPartitions,
-        stopping_condition: StoppingCondition,
-        crossover_operator_options: SimulatedBinaryCrossoverArgs | None = None,
-        mutation_operator_options: PolynomialMutationArgs | None = None,
-        resume_from_file: Path | None = None,
-        parallel: bool | None = True,
-        export_history: ExportHistory | None = None,
-        seed: int | None = None,
+            self,
+            number_of_individuals: int | None,
+            number_of_partitions: int | TwoLayerPartitions,
+            stopping_condition: StoppingCondition,
+            crossover_operator_options: SimulatedBinaryCrossoverArgs | None = None,
+            mutation_operator_options: PolynomialMutationArgs | None = None,
+            resume_from_file: Path | None = None,
+            parallel: bool | None = True,
+            export_history: ExportHistory | None = None,
+            seed: int | None = None,
     ) -> None:
         """
         Initialise the class.
@@ -667,6 +697,7 @@ class NSGA3Arg:
         slightly different solutions. The seed is randomly picked if this is `None`.
         """
         ...
+
 
 class Algorithm:
     """Select the algorithm to use to solve the optimisation problem."""
