@@ -9,8 +9,10 @@ use pyo3::prelude::*;
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(feature = "python", pyclass)]
 pub enum StoppingCondition {
-    /// Set a maximum duration (as number of seconds).
-    MaxDuration(u32),
+    /// Set a maximum duration (as number of minutes).
+    MaxDurationAsMinutes(u32),
+    /// Set a maximum duration (as number of hours).
+    MaxDurationAsHours(u32),
     /// Set a maximum number of generations.
     MaxGeneration(u32),
     /// Set a maximum number of function evaluations.
@@ -27,7 +29,8 @@ impl StoppingCondition {
     /// returns: `String`
     pub fn name(&self) -> String {
         match self {
-            StoppingCondition::MaxDuration(v) => format!("maximum duration={v} seconds"),
+            StoppingCondition::MaxDurationAsMinutes(v) => format!("maximum duration={v} minutes"),
+            StoppingCondition::MaxDurationAsHours(v) => format!("maximum duration={v} hours"),
             StoppingCondition::MaxGeneration(v) => format!("maximum number of generations={v}"),
             StoppingCondition::MaxFunctionEvaluations(v) => {
                 format!("maximum number of function evaluations={v}")
@@ -63,7 +66,8 @@ impl StoppingCondition {
 impl Display for StoppingCondition {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
-            StoppingCondition::MaxDuration(duration) => write!(f, "{duration} seconds"),
+            StoppingCondition::MaxDurationAsMinutes(duration) => write!(f, "{duration} minutes"),
+            StoppingCondition::MaxDurationAsHours(duration) => write!(f, "{duration} hours"),
             StoppingCondition::MaxGeneration(generation) => write!(f, "{generation} generations"),
             StoppingCondition::MaxFunctionEvaluations(nfe) => write!(f, "{nfe} evaluations"),
             StoppingCondition::Any(values) => {
@@ -89,7 +93,8 @@ pub mod py {
     #[derive(Clone)]
     #[allow(non_camel_case_types)]
     pub enum PyStoppingConditionValue {
-        max_duration(u32),
+        max_duration_as_minutes(u32),
+        max_duration_as_hours(u32),
         max_generation(u32),
         max_function_evaluations(u32),
     }
@@ -98,7 +103,8 @@ pub mod py {
     impl PyStoppingConditionValue {
         fn value(&self) -> u32 {
             match self {
-                PyStoppingConditionValue::max_duration(v) => *v,
+                PyStoppingConditionValue::max_duration_as_minutes(v) => *v,
+                PyStoppingConditionValue::max_duration_as_hours(v) => *v,
                 PyStoppingConditionValue::max_generation(v) => *v,
                 PyStoppingConditionValue::max_function_evaluations(v) => *v,
             }
@@ -106,8 +112,11 @@ pub mod py {
 
         fn __repr__(&self) -> PyResult<String> {
             let attr = match &self {
-                PyStoppingConditionValue::max_duration(duration) => {
-                    format!("duration={duration} seconds")
+                PyStoppingConditionValue::max_duration_as_minutes(duration) => {
+                    format!("duration={duration} minutes")
+                }
+                PyStoppingConditionValue::max_duration_as_hours(duration) => {
+                    format!("duration={duration} hours")
                 }
                 PyStoppingConditionValue::max_generation(generation) => {
                     format!("generation={generation} generations")
@@ -127,8 +136,11 @@ pub mod py {
     impl From<PyStoppingConditionValue> for StoppingCondition {
         fn from(cond: PyStoppingConditionValue) -> Self {
             match cond {
-                PyStoppingConditionValue::max_duration(duration) => {
-                    StoppingCondition::MaxDuration(duration)
+                PyStoppingConditionValue::max_duration_as_minutes(duration) => {
+                    StoppingCondition::MaxDurationAsMinutes(duration)
+                }
+                PyStoppingConditionValue::max_duration_as_hours(duration) => {
+                    StoppingCondition::MaxDurationAsHours(duration)
                 }
                 PyStoppingConditionValue::max_generation(generation) => {
                     StoppingCondition::MaxGeneration(generation)
@@ -163,8 +175,11 @@ pub mod py {
 
         fn conditions(&self) -> Vec<PyStoppingConditionValue> {
             match self {
-                StoppingCondition::MaxDuration(d) => {
-                    vec![PyStoppingConditionValue::max_duration(*d)]
+                StoppingCondition::MaxDurationAsMinutes(d) => {
+                    vec![PyStoppingConditionValue::max_duration_as_minutes(*d)]
+                }
+                StoppingCondition::MaxDurationAsHours(d) => {
+                    vec![PyStoppingConditionValue::max_duration_as_hours(*d)]
                 }
                 StoppingCondition::MaxGeneration(g) => {
                     vec![PyStoppingConditionValue::max_generation(*g)]
@@ -190,50 +205,5 @@ pub mod py {
         fn __str__(&self) -> String {
             self.__repr__().unwrap()
         }
-    }
-}
-
-#[cfg(all(feature = "python", test))]
-mod tests {
-    use crate::algorithms::StoppingCondition;
-    use pyo3::ffi::c_str;
-    use pyo3::prelude::*;
-
-    #[test]
-    fn test_stopping_condition_value_init() {
-        #[pymodule]
-        fn py_optirustic(m: &Bound<'_, PyModule>) -> PyResult<()> {
-            m.add_class::<StoppingCondition>()?;
-
-            Ok(())
-        }
-        pyo3_build_config::add_extension_module_link_args();
-
-        pyo3::append_to_inittab!(py_optirustic);
-        Python::with_gil(|py| {
-            Python::run(
-                py,
-                c_str!(
-                    "\
-                import StoppingConditionValue;\
-                StoppingConditionValue.max_duration(3)\
-            "
-                ),
-                None,
-                None,
-            )
-        })
-        .unwrap();
-
-        // let instance = Python::with_gil(|py| {
-        //     py_run!(
-        //         py,
-        //         (),
-        //         r#"
-        //
-        //         "#
-        //     )
-        //
-        // });
     }
 }

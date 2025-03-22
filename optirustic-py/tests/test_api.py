@@ -120,7 +120,7 @@ class TestPythonAPI:
         Test the StoppingCondition class.
         :return: None.
         """
-        c1 = StoppingConditionValue.max_duration(3)
+        c1 = StoppingConditionValue.max_duration_as_minutes(3)
         assert c1.value() == 3
         assert StoppingCondition(condition=c1).conditions()[0].value() == c1.value()
 
@@ -135,7 +135,7 @@ class TestPythonAPI:
         :return: None.
         """
         stopping_condition = StoppingCondition(
-            condition=StoppingConditionValue.max_duration(3)
+            condition=StoppingConditionValue.max_duration_as_minutes(3)
         )
         sbx = SimulatedBinaryCrossoverArgs(
             distribution_index=1, crossover_probability=0.9
@@ -166,7 +166,7 @@ class TestPythonAPI:
         :return: None.
         """
         stopping_condition = StoppingCondition(
-            condition=StoppingConditionValue.max_duration(3)
+            condition=StoppingConditionValue.max_duration_as_minutes(3)
         )
         args = NSGA3Arg(
             number_of_partitions=10,

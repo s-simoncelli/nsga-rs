@@ -17,6 +17,9 @@ use pyo3::exceptions::PyValueError;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
+#[cfg(feature = "python")]
+use crate::algorithms::{NSGA2Arg, NSGA3Arg};
+
 use crate::algorithms::StoppingCondition;
 use crate::core::{
     DataValue, Individual, IndividualExport, OError, ObjectiveDirection, Population, Problem,
@@ -496,8 +499,11 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     /// returns: `Result<bool, OError>`
     fn is_stopping_condition_met(&self, condition: &StoppingCondition) -> Result<bool, OError> {
         let is_met = match condition {
-            StoppingCondition::MaxDuration(duration) => {
-                *duration <= (Instant::now().elapsed().as_secs() as u32)
+            StoppingCondition::MaxDurationAsMinutes(duration) => {
+                *duration <= ((Instant::now().elapsed().as_secs() / 60) as u32)
+            }
+            StoppingCondition::MaxDurationAsHours(duration) => {
+                *duration <= ((Instant::now().elapsed().as_secs() / 60 / 60) as u32)
             }
             StoppingCondition::MaxGeneration(generation) => *generation <= self.generation(),
             StoppingCondition::MaxFunctionEvaluations(nfe) => {
@@ -724,6 +730,55 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
         }
 
         Population::deserialise(&data.individuals, problem.clone())
+    }
+}
+
+/// Enum used to identify the chosen algorithm and its options in a python wrapper. Pass this
+/// to another python class to then match and run an algorithm from Rust.
+///
+/// # Python example
+/// ```python
+/// # define the NSGA2 options
+/// args = NSGA2Arg(
+///     number_of_individuals=10,
+///     stopping_condition=StoppingCondition(
+///         condition=StoppingConditionValue.max_duration(3)
+///     )
+/// )
+///
+/// # initialise the enum
+/// algo = Algorithm.nsga2(args)
+/// ```
+#[cfg(feature = "python")]
+#[pyclass(name = "Algorithm")]
+#[derive(Clone)]
+#[allow(non_camel_case_types)]
+pub enum PyAlgorithm {
+    nsga2 { options: NSGA2Arg },
+    nsga3 { options: NSGA3Arg },
+    adaptive_nsga3 { options: NSGA3Arg },
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl PyAlgorithm {
+    fn __repr__(&self) -> PyResult<String> {
+        let value = match self {
+            PyAlgorithm::nsga2 { options } => {
+                format!("NSGA2(options={:?})", options.__repr__()?)
+            }
+            PyAlgorithm::nsga3 { options } => {
+                format!("NSGA3(options={:?})", options.__repr__()?)
+            }
+            PyAlgorithm::adaptive_nsga3 { options } => {
+                format!("AdaptiveNSGA3(options={:?})", options.__repr__()?)
+            }
+        };
+        Ok(value)
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__().unwrap()
     }
 }
 

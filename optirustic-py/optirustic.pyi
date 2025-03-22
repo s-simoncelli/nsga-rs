@@ -399,11 +399,21 @@ class StoppingConditionValue:
         ...
 
     @classmethod
-    def max_duration(cls, duration: int) -> StoppingConditionValue:
+    def max_duration_as_minutes(cls, duration: int) -> StoppingConditionValue:
         """
         Initialise the stopping condition. This will stop the algorithm when the
-        elapsed time exceeds the given duration.
-        :param duration: The duration in seconds.
+        elapsed time exceeds the given duration in minutes.
+        :param duration: The duration in minutes.
+        :return: The StoppingConditionValue instance.
+        """
+        ...
+
+    @classmethod
+    def max_duration_as_hours(cls, duration: int) -> StoppingConditionValue:
+        """
+        Initialise the stopping condition. This will stop the algorithm when the
+        elapsed time exceeds the given duration in hours.
+        :param duration: The duration in hours.
         :return: The StoppingConditionValue instance.
         """
         ...

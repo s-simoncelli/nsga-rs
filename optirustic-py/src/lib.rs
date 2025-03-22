@@ -10,7 +10,7 @@ use pyo3::types::PyDict;
 
 use optirustic::algorithms::{
     Algorithm, AlgorithmExport, AlgorithmSerialisedExport, ExportHistory, NSGA2Arg, NSGA3Arg,
-    PyStoppingConditionValue, StoppingCondition, NSGA2, NSGA3,
+    PyAlgorithm, PyStoppingConditionValue, StoppingCondition, NSGA2, NSGA3,
 };
 use optirustic::core::{
     DataValue, Individual, OError, ObjectiveDirection, PyProblem, RelationalOperator,
@@ -224,53 +224,6 @@ impl NSGA3Data {
             let fun: Py<PyAny> = get_plot_fun("plot_reference_points", py)?;
             fun.call1(py, (ref_points,))
         })
-    }
-}
-
-/// Enum used to identify the chosen algorithm and its options in a python wrapper. Pass this
-/// to another python class to then match and run an algorithm from Rust.
-///
-/// # Python example
-/// ```python
-/// # define the NSGA2 options
-/// args = NSGA2Arg(
-///     number_of_individuals=10,
-///     stopping_condition=StoppingCondition(
-///         condition=StoppingConditionValue.max_duration(3)
-///     )
-/// )
-///
-/// # initialise the enum
-/// algo = Algorithm.nsga2(args)
-/// ```
-#[pyclass(name = "Algorithm")]
-#[derive(Clone)]
-#[allow(non_camel_case_types)]
-pub enum PyAlgorithm {
-    nsga2 { options: NSGA2Arg },
-    nsga3 { options: NSGA3Arg },
-    adaptive_nsga3 { options: NSGA3Arg },
-}
-
-#[pymethods]
-impl PyAlgorithm {
-    fn __repr__(&self) -> PyResult<String> {
-        let value = match self {
-            PyAlgorithm::nsga2 { options } => {
-                format!("NSGA2(options={:?})", options.__repr__()?)
-            }
-            PyAlgorithm::nsga3 { options } => {
-                format!("NSGA3(options={:?})", options.__repr__()?)
-            }
-            PyAlgorithm::adaptive_nsga3 { options } => {
-                format!("AdaptiveNSGA3(options={:?})", options.__repr__()?)
-            }
-        };
-        Ok(value)
-    }
-
-    fn __str__(&self) -> String {
-        self.__repr__().unwrap()
     }
 }
 

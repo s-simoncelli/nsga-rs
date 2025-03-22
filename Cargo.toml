@@ -1,6 +1,6 @@
 [package]
 name = "optirustic"
-version = "1.2.0"
+version = "1.2.2"
 authors = ["Stefano Simoncelli <16114781+s-simoncelli@users.noreply.github.com>"]
 edition = "2021"
 rust-version = "1.80"
@@ -33,8 +33,8 @@ chrono = { version = "0.4.38", features = ["serde"] }
 optirustic-macros = { path = "libs/optirustic-macros", version = "1.1.0" }
 hv-fonseca-et-al-2006-sys = { path = "libs/hv-fonseca-et-al-2006-sys", version = "2.0.2-rc.2" }
 nalgebra = "0.33.0"
-pyo3 = { version = "0.24.0", optional = true, features = ["extension-module"] }
-pyo3-build-config = { version = "0.24.0", optional = true }
+pyo3 = { version = ">=0.23.5", optional = true, features = ["extension-module"] }
+pyo3-build-config = { version = ">=0.23.5", optional = true }
 
 [dev-dependencies]
 float-cmp = "0.10.0"
