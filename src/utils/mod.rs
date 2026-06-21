@@ -11,7 +11,7 @@ use std::hash::{BuildHasher, Hash};
 use crate::core::OError;
 
 mod algebra;
-mod fast_non_dominated_sort;
+pub(crate) mod fast_non_dominated_sort;
 mod reference_points;
 
 /// Define the sort type
