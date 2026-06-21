@@ -437,6 +437,7 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
             .filter_map(|i| if !i.is_evaluated() { Some(1) } else { None })
             .sum()
     }
+
     /// Run the algorithm.
     ///
     /// return: `Result<(), OError>`

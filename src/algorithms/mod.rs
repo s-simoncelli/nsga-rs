@@ -10,6 +10,6 @@ pub use stopping_condition::StoppingCondition;
 
 mod a_nsga3;
 mod algorithm;
-mod nsga2;
+pub(crate) mod nsga2;
 mod nsga3;
 mod stopping_condition;

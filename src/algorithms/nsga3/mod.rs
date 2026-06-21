@@ -5,11 +5,12 @@ use std::fmt::{Display, Formatter};
 use std::ops::Rem;
 use std::path::PathBuf;
 
+use crate::algorithms::nsga2::CoreNSGA2;
 use crate::algorithms::nsga3::adaptive_ref_points::AdaptiveReferencePoints;
 use crate::algorithms::nsga3::associate::AssociateToRefPoint;
 use crate::algorithms::nsga3::niching::Niching;
 use crate::algorithms::nsga3::normalise::Normalise;
-use crate::algorithms::{Algorithm, NSGA2};
+use crate::algorithms::Algorithm;
 use crate::core::utils::get_rng;
 use crate::core::{DataValue, Individual, OError};
 use crate::operators::{
@@ -291,7 +292,7 @@ impl NSGA3 {
             )?
         } else {
             info!("Created initial random population");
-            Population::init(problem.clone(), number_of_individuals)
+            Population::init(problem.clone(), number_of_individuals)?
         };
 
         let selector_operator = TournamentSelector::<ParetoConstrainedDominance>::new(2);
@@ -306,7 +307,7 @@ impl NSGA3 {
 
         info!(
             "{}",
-            NSGA2::algorithm_option_str(&problem, &crossover_options, &mutation_options)
+            CoreNSGA2::algorithm_option_str(&problem, &crossover_options, &mutation_options)
         );
 
         Ok(Self {
