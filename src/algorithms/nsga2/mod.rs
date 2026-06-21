@@ -21,12 +21,10 @@ use survival::NSGA2Survival;
 // Declare nested modules
 mod crowding;
 mod nsga2;
-mod r_nsga2;
 mod survival;
 
 // Re-export algorithms
 pub use nsga2::{NSGA2Arg, NSGA2};
-pub use r_nsga2::{RNSGA2Arg, RNSGA2};
 
 /// The data key where the crowding distance is stored for each [`Individual`].
 pub const CROWDING_DIST_KEY: &str = "crowding_distance";
