@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from matplotlib import pyplot as plt
-from optirustic import NSGA3
+from nsga_rs import NSGA3
 
 # Generate Pareto front charts and objective vs. reference point charts
 # A Parallel coordinate chart will be generated

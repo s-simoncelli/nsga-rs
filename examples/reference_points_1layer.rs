@@ -1,8 +1,8 @@
 use std::env;
 use std::path::PathBuf;
 
-use optirustic::core::OError;
-use optirustic::utils::{DasDarren1998, NumberOfPartitions};
+use nsga_rs::core::OError;
+use nsga_rs::utils::{DasDarren1998, NumberOfPartitions};
 
 /// Generate and plot reference points using the Ds & Darren (1998) method.
 fn main() -> Result<(), OError> {

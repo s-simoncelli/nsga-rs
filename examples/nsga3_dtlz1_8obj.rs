@@ -4,18 +4,18 @@ use std::path::PathBuf;
 
 use log::LevelFilter;
 
-use optirustic::algorithms::{
+use nsga_rs::algorithms::{
     Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, StoppingCondition, NSGA3,
 };
-use optirustic::core::builtin_problems::DTLZ1Problem;
-use optirustic::operators::{PolynomialMutationArgs, SimulatedBinaryCrossoverArgs};
-use optirustic::utils::{NumberOfPartitions, TwoLayerPartitions};
+use nsga_rs::core::builtin_problems::DTLZ1Problem;
+use nsga_rs::operators::{PolynomialMutationArgs, SimulatedBinaryCrossoverArgs};
+use nsga_rs::utils::{NumberOfPartitions, TwoLayerPartitions};
 
 /// Solve the DTLZ1 problem from Deb et al. (2013) with 8 objectives.
 ///
 /// Make sure to compile this in release mode to speed up the calculation:
 ///
-/// `cargo run --example nsga3_dtlz1_8obj -p optirustic --release`
+/// `cargo run --example nsga3_dtlz1_8obj -p nsga_rs --release`
 fn main() -> Result<(), Box<dyn Error>> {
     // Add log
     env_logger::builder().filter_level(LevelFilter::Info).init();

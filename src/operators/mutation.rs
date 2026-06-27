@@ -102,9 +102,9 @@ impl PolynomialMutationArgs {
 ///
 /// ```
 /// use std::error::Error;
-/// use optirustic::core::{BoundedNumber, Individual, Problem, VariableType, VariableValue,
+/// use nsga_rs::core::{BoundedNumber, Individual, Problem, VariableType, VariableValue,
 /// Objective, Constraint, ObjectiveDirection, RelationalOperator, EvaluationResult, Evaluator};
-/// use optirustic::operators::{Crossover, PolynomialMutationArgs, PolynomialMutation, Mutation};
+/// use nsga_rs::operators::{Crossover, PolynomialMutationArgs, PolynomialMutation, Mutation};
 /// use std::sync::Arc;
 /// use rand_chacha::ChaCha8Rng;
 /// use rand::SeedableRng;

@@ -6,21 +6,21 @@ use chrono::{DateTime, Utc};
 use pyo3::exceptions::PyValueError;
 use pyo3::ffi::c_str;
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::IntoPyDict;
 
-use optirustic::algorithms::{
+use nsga_rs::algorithms::{
     Algorithm, AlgorithmExport, AlgorithmSerialisedExport, ExportHistory, NSGA2Arg, NSGA3Arg,
     PyAlgorithm, PyStoppingConditionValue, StoppingCondition, NSGA2, NSGA3,
 };
-use optirustic::core::{
+use nsga_rs::core::{
     DataValue, Individual, OError, ObjectiveDirection, PyProblem, RelationalOperator,
 };
-use optirustic::metrics::HyperVolume;
-use optirustic::operators::{PolynomialMutationArgs, SimulatedBinaryCrossoverArgs};
-use optirustic::utils::{DasDarren1998, NumberOfPartitions, TwoLayerPartitions};
+use nsga_rs::metrics::HyperVolume;
+use nsga_rs::operators::{PolynomialMutationArgs, SimulatedBinaryCrossoverArgs};
+use nsga_rs::utils::{DasDarren1998, NumberOfPartitions, TwoLayerPartitions};
 
 /// Get the python function from the utils.plot module
-pub fn get_plot_fun(function: &str, py: Python<'_>) -> PyResult<PyObject> {
+pub fn get_plot_fun(function: &str, py: Python<'_>) -> PyResult<Py<PyAny>> {
     let code = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/utils/plot.py"))?;
     let module = PyModule::from_code(
         py,
@@ -43,7 +43,7 @@ macro_rules! create_interface {
             #[pyo3(get)]
             individuals: Vec<Individual>,
             #[pyo3(get)]
-            took: PyObject,
+            took: Py<PyAny>,
             #[pyo3(get)]
             objectives: HashMap<String, Vec<f64>>,
             #[pyo3(get)]
@@ -75,16 +75,18 @@ macro_rules! create_interface {
                 let problem: PyProblem = export_data.problem.as_ref().into();
 
                 // Time taken
-                let took = Python::with_gil(|py| {
+                let took = Python::attach(|py| -> PyResult<Py<PyAny>> {
                     let module = PyModule::import(py, "datetime")?;
 
                     let timedelta = module.getattr("timedelta")?;
-                    let kwargs = PyDict::new(py);
-                    kwargs.set_item("hours", export_data.took.hours)?;
-                    kwargs.set_item("minutes", export_data.took.minutes)?;
-                    kwargs.set_item("seconds", export_data.took.seconds)?;
+                    let kwargs = [
+                        ("hours", export_data.took.hours),
+                        ("minutes", export_data.took.minutes),
+                        ("seconds", export_data.took.seconds),
+                    ]
+                    .into_py_dict(py)?;
                     let result = timedelta.call((), Some(&kwargs))?;
-                    result.extract::<PyObject>()
+                    Ok(result.extract::<Py<PyAny>>()?)
                 })?;
 
                 // Individuals
@@ -169,8 +171,8 @@ macro_rules! create_interface {
             }
 
             /// Plot the Pareto front
-            pub fn plot(&self) -> PyResult<PyObject> {
-                Python::with_gil(|py| {
+            pub fn plot(&self) -> PyResult<Py<PyAny>> {
+                Python::attach(|py| {
                     let obj_count = self.problem.number_of_objectives;
                     let fun_name = match obj_count {
                         2 => "plot_2d",
@@ -194,14 +196,14 @@ macro_rules! create_interface {
             pub fn plot_convergence(
                 folder: String,
                 reference_point: Vec<f64>,
-            ) -> PyResult<PyObject> {
+            ) -> PyResult<Py<PyAny>> {
                 let folder = PathBuf::from(folder);
                 let all_serialise_data = $type::read_json_files(&folder)
                     .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 let data = HyperVolume::from_files(&all_serialise_data, &reference_point)
                     .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
-                Python::with_gil(|py| {
+                Python::attach(|py| {
                     let fun: Py<PyAny> = get_plot_fun("plot_convergence", py)?;
                     fun.call1(py, (data.generations(), data.values()))
                 })
@@ -217,9 +219,9 @@ create_interface!(NSGA3Data, NSGA3, NSGA3Arg);
 #[pymethods]
 impl NSGA3Data {
     /// Reference point plot using the points exported by the NSGA3 algorithm
-    pub fn plot_reference_points(&self) -> PyResult<PyObject> {
+    pub fn plot_reference_points(&self) -> PyResult<Py<PyAny>> {
         let algorithm_data = self.additional_data.as_ref().unwrap();
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let ref_points = algorithm_data.get("reference_points").unwrap();
             let fun: Py<PyAny> = get_plot_fun("plot_reference_points", py)?;
             fun.call1(py, (ref_points,))
@@ -249,8 +251,8 @@ impl PyDasDarren1998 {
     }
 
     /// Reference point plot from vector.
-    pub fn plot(&self, ref_points: Vec<Vec<f64>>) -> PyResult<PyObject> {
-        Python::with_gil(|py| {
+    pub fn plot(&self, ref_points: Vec<Vec<f64>>) -> PyResult<Py<PyAny>> {
+        Python::attach(|py| {
             let fun: Py<PyAny> = get_plot_fun("plot_reference_points", py)?;
             fun.call1(py, (ref_points,))
         })
@@ -265,8 +267,8 @@ impl PyDasDarren1998 {
     }
 }
 
-#[pymodule(name = "optirustic")]
-fn optirustic_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
+#[pymodule(name = "nsga_rs")]
+fn nsga_rs_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<StoppingCondition>()?;
     m.add_class::<PyStoppingConditionValue>()?;
     m.add_class::<SimulatedBinaryCrossoverArgs>()?;

@@ -16,7 +16,7 @@ use crate::utils::hasmap_eq_with_nans;
 /// # Example
 /// ```
 /// use std::error::Error;
-/// use optirustic::core::{BoundedNumber, Constraint, Individual, Problem, Objective,
+/// use nsga_rs::core::{BoundedNumber, Constraint, Individual, Problem, Objective,
 /// ObjectiveDirection, RelationalOperator, EvaluationResult, Evaluator, VariableType, VariableValue};
 /// use std::sync::Arc;
 ///

@@ -3,7 +3,7 @@ requires = ["maturin>=1.5,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "optirustic"
+name = "nsga-rs"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Rust",
@@ -11,21 +11,17 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dynamic = ["version"]
-dependencies = ["matplotlib~=3.9.2", "numpy~=2.0.1"]
+dependencies = ["matplotlib~=3.11.0", "numpy~=2.5.0"]
 
-[project.optional-dependencies]
+# [project.optional-dependencies]
+[dependency-groups]
 dev = ["ruff", "maturin", "pytest"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
 
 [tool.ruff]
-exclude = [
-    ".env",
-    ".pytest_cache",
-    ".pytype",
-    ".ruff_cache",
-]
+exclude = [".env", ".pytest_cache", ".pytype", ".ruff_cache"]
 
 # Same as Black.
 indent-width = 4

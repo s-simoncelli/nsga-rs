@@ -47,8 +47,7 @@ pub struct SimulatedBinaryCrossoverArgs {
     /// offsprings.
     pub distribution_index: f64,
     /// The probability that the parents participate in the crossover. If 1.0, the parents always
-    /// participate in the crossover. If the probability is lower, then the children are the exact
-    /// clones of their parents (i.e. all the variable values do not change).
+    /// participate in the crossover.
     pub crossover_probability: f64,
     /// The probability that a variable belonging to both parents is used in the crossover. The
     /// paper uses 0.5, meaning that  each variable in a solution has a 50% chance of changing its
@@ -128,9 +127,9 @@ impl SimulatedBinaryCrossoverArgs {
 ///
 /// ```
 /// use std::error::Error;
-/// use optirustic::core::{BoundedNumber, Individual, Problem, VariableType, VariableValue,
+/// use nsga_rs::core::{BoundedNumber, Individual, Problem, VariableType, VariableValue,
 /// Objective, Constraint, ObjectiveDirection, RelationalOperator, EvaluationResult, Evaluator};
-/// use optirustic::operators::{Crossover, SimulatedBinaryCrossover, SimulatedBinaryCrossoverArgs};
+/// use nsga_rs::operators::{Crossover, SimulatedBinaryCrossover, SimulatedBinaryCrossoverArgs};
 /// use std::sync::Arc;
 /// use rand_chacha::ChaCha8Rng;
 /// use rand::SeedableRng;

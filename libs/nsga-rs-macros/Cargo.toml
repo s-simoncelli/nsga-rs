@@ -1,0 +1,19 @@
+[package]
+name = "nsga-rs-macros"
+version = "1.1.0"
+edition = "2021"
+repository = "https://github.com/s-simoncelli/nsga_rs"
+authors = [
+    "Stefano Simoncelli <16114781+s-simoncelli@users.noreply.github.com>",
+]
+description = "A set of macros for the nsga_rs crate"
+homepage = "https://github.com/s-simoncelli/nsga_rs"
+license = "GPL-3.0-only"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2.0.72", features = ["full"] }
+quote = "1.0.36"
+proc-macro2 = "1.0.86"

@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 use log::LevelFilter;
 
-use optirustic::algorithms::{Algorithm, NSGA2Arg, StoppingCondition, NSGA2};
-use optirustic::core::builtin_problems::ZTD1Problem;
+use nsga_rs::algorithms::{Algorithm, NSGA2Arg, StoppingCondition, NSGA2};
+use nsga_rs::core::builtin_problems::ZTD1Problem;
 
 /// Solve the ZDT1 problem (SCH) where the following 2 objectives are minimised:
 /// - `f_1(x) = x_1`
@@ -17,7 +17,7 @@ use optirustic::core::builtin_problems::ZTD1Problem;
 ///
 /// Make sure to compile this in release mode to speed up the calculation:
 ///
-/// `cargo run --example nsga2_zdt1 -p optirustic --release`
+/// `cargo run --example nsga2_zdt1 -p nsga_rs --release`
 fn main() -> Result<(), Box<dyn Error>> {
     // Add log
     env_logger::builder().filter_level(LevelFilter::Info).init();

@@ -1,0 +1,13 @@
+[package]
+name = "nsga-rs-py"
+version = "0.4.1"
+edition = "2021"
+
+[lib]
+name = "nsga_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.27.0", features = ["chrono", "multiple-pymethods"] }
+nsga_rs = { path = "..", features = ["python"] }
+chrono = "0.4.38"
