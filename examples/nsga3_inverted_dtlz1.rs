@@ -4,12 +4,12 @@ use std::path::PathBuf;
 
 use log::LevelFilter;
 
-use optirustic::algorithms::{
+use nsga_rs::algorithms::{
     AdaptiveNSGA3, Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, StoppingCondition,
 };
-use optirustic::core::builtin_problems::DTLZ1Problem;
-use optirustic::operators::SimulatedBinaryCrossoverArgs;
-use optirustic::utils::NumberOfPartitions;
+use nsga_rs::core::builtin_problems::DTLZ1Problem;
+use nsga_rs::operators::SimulatedBinaryCrossoverArgs;
+use nsga_rs::utils::NumberOfPartitions;
 
 /// Solve the inverted DTLZ1 problem from Deb et al. (2013) with 3 objectives. This is a problem where the
 /// optimal solutions or objectives lie on the hyper-plane passing through the intercept point
@@ -18,7 +18,7 @@ use optirustic::utils::NumberOfPartitions;
 ///
 /// Make sure to compile this in release mode to speed up the calculation:
 ///
-/// `cargo run --example nsga3_inverted_dtlz1 -p optirustic --release`
+/// `cargo run --example nsga3_inverted_dtlz1 -p nsga_rs --release`
 fn main() -> Result<(), Box<dyn Error>> {
     // Add log
     env_logger::builder().filter_level(LevelFilter::Info).init();

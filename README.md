@@ -1,40 +1,38 @@
-# Optirustic
+# NSGA RS
 
-[![Package](https://img.shields.io/crates/v/optirustic.svg)](https://crates.io/crates/optirustic)
-[![Documentation](https://docs.rs/optirustic/badge.svg)](https://docs.rs/optirustic)
+[![Package](https://img.shields.io/crates/v/nsga_rs.svg)](https://crates.io/crates/nsga_rs)
+[![Documentation](https://docs.rs/nsga_rs/badge.svg)](https://docs.rs/nsga_rs)
 
 <p align="center">
     <img src="examples/results/SCH_2obj_NSGA2_Pareto_front.png" width="300" alt="Results" hspace="10"/>
     <img src="examples/results/DTLZ1_3obj_NSGA3_gen400_Pareto_front.png" width="300" alt="Results" />
 </p>
 
-Optirustic is a framework written in Rust that provides algorithms and
-analysis tool to solve multi-objective problems using multi-objective
-evolutionary algorithms (MOEAs). It allows you to:
+nsga_rs is a framework written in Rust that provides multi-objective evolutionary algorithms based on the NSGA family and analysis tool to solve multi-objective problems. It allows you to:
 
 - define minimisation and maximisation problems with custom objective functions;
 - define constraint and unconstrained variables (real, integer, boolean or choice);
 - use multi-thread to evaluate objectives and constraints on population with many individuals
 - export the population history as JSON and resume its evolution from file
-- generate charts with the dedicated [Python package](https://pypi.org/project/optirustic/)
+- generate charts with the dedicated [Python package](https://pypi.org/project/nsga_rs/)
 
 The library comes with the following
-algorithms: [`NSGA2`](https://docs.rs/optirustic/latest/optirustic/algorithms/struct.NSGA2.html),
-[`NSGA3`](https://docs.rs/optirustic/latest/optirustic/algorithms/struct.NSGA3.html) and
-[`AdaptiveNSGA3`](https://docs.rs/optirustic/latest/optirustic/algorithms/struct.AdaptiveNSGA3.html).
+algorithms: [`NSGA2`](https://docs.rs/nsga_rs/latest/nsga_rs/algorithms/struct.NSGA2.html),
+[`NSGA3`](https://docs.rs/nsga_rs/latest/nsga_rs/algorithms/struct.NSGA3.html) and
+[`AdaptiveNSGA3`](https://docs.rs/nsga_rs/latest/nsga_rs/algorithms/struct.AdaptiveNSGA3.html).
 
-The API documentation is available on [docs.rs](https://docs.rs/optirustic/).
+The API documentation is available on [docs.rs](https://docs.rs/nsga_rs/).
 Examples showcasing this library's features are available in
 the [examples folder of this repository](examples/nsga2_sch.rs).
 
-## Installing Optirustic
+## Installing nsga_rs
 
-Optirustic is available on [crates.io](https://crates.io/crates/optirustic). The
+nsga_rs is available on [crates.io](https://crates.io/crates/nsga_rs). The
 recommended way to use it is to add a line into your Cargo.toml:
 
 ```toml
 [dependencies]
-optirustic = "*"
+nsga_rs = "*"
 ```
 
 ## Example
@@ -109,7 +107,7 @@ impl Evaluator for SCHProblem {
 }
 ```
 
-<p align="right">(<a href="#optirustic">back to top</a>)</p>
+<p align="right">(<a href="#nsga_rs">back to top</a>)</p>
 
 ### Setup and run the genetic algorithm
 
@@ -161,17 +159,17 @@ and these are the plotted solutions:
     <img src="examples/results/SCH_2obj_NSGA2_solutions.png" width="300" alt="Results" />
 </div>
 
-<p align="right">(<a href="#optirustic">back to top</a>)</p>
+<p align="right">(<a href="#nsga_rs">back to top</a>)</p>
 
 ### Plotting and inspecting data
 
 With the library, you can set
-the [`export_history`](https://docs.rs/optirustic/latest/optirustic/algorithms/struct.NSGA2Arg.html#structfield.export_history)
+the [`export_history`](https://docs.rs/nsga_rs/latest/nsga_rs/algorithms/struct.NSGA2Arg.html#structfield.export_history)
 option, to export serialised results as JSON files as the algorithm evolves, or
-call [`save_to_json`](https://docs.rs/optirustic/latest/optirustic/algorithms/trait.Algorithm.html#method.save_to_json)
+call [`save_to_json`](https://docs.rs/nsga_rs/latest/nsga_rs/algorithms/trait.Algorithm.html#method.save_to_json)
 to export the results at the last population evolution.
 
-This crate comes with a companion [Python package](./optirustic-py) to inspect the results
+This crate comes with a companion [Python package](./nsga-rs-py) to inspect the results
 and easily plot the Pareto front or the algorithm convergence. This is how all the charts within
 this README file were generated. Have a look at the `py` file in the [example folder](./examples).
 

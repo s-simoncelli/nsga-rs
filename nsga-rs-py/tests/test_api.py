@@ -4,7 +4,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pytest
-from optirustic import (
+from nsga_rs import (
     NSGA3Data,
     ObjectiveDirection,
     NSGA2Data,

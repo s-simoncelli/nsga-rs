@@ -37,7 +37,7 @@ impl Default for LinearSolverTolerance {
 /// # Examples
 ///
 /// ```
-/// use optirustic::utils::{LinearSolverTolerance, solve_linear_system};
+/// use nsga_rs::utils::{LinearSolverTolerance, solve_linear_system};
 /// let a = vec![
 ///     vec![1.0, 9.0, -5.0],
 ///     vec![-3.0, -5.0, -5.0],

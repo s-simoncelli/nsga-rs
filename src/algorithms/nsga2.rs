@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use log::{debug, info};
 use rand::RngCore;
 
-use optirustic_macros::{as_algorithm, as_algorithm_args, impl_algorithm_trait_items};
+use nsga_rs_macros::{as_algorithm, as_algorithm_args, impl_algorithm_trait_items};
 
 use crate::algorithms::Algorithm;
 use crate::core::utils::get_rng;
@@ -688,7 +688,7 @@ mod test_sorting {
 
 #[cfg(test)]
 mod test_problems {
-    use optirustic_macros::test_with_retries;
+    use nsga_rs_macros::test_with_retries;
 
     use crate::algorithms::{Algorithm, NSGA2Arg, StoppingCondition, NSGA2};
     use crate::core::builtin_problems::{

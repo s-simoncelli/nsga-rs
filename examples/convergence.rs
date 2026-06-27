@@ -1,10 +1,10 @@
 use std::env;
 use std::path::PathBuf;
 
-use optirustic::algorithms::{Algorithm, ExportHistory, NSGA2Arg, StoppingCondition, NSGA2};
-use optirustic::core::builtin_problems::SCHProblem;
-use optirustic::core::OError;
-use optirustic::metrics::HyperVolume;
+use nsga_rs::algorithms::{Algorithm, ExportHistory, NSGA2Arg, StoppingCondition, NSGA2};
+use nsga_rs::core::builtin_problems::SCHProblem;
+use nsga_rs::core::OError;
+use nsga_rs::metrics::HyperVolume;
 
 /// This example shows how to track the algorithm convergence by calculating the hyper-volume metric.
 /// This library employs different and fast methods, depending on the number of problem objectives,
@@ -21,7 +21,7 @@ use optirustic::metrics::HyperVolume;
 ///
 /// Make sure to compile this in release mode to speed up the calculation:
 ///
-/// `cargo run --example convergence -p optirustic --release`
+/// `cargo run --example convergence -p nsga_rs --release`
 fn main() -> Result<(), OError> {
     let problem = SCHProblem::create()?;
     let out_path = PathBuf::from(&env::current_dir().expect("Cannot fetch current directory"))

@@ -47,7 +47,7 @@ pub trait Evaluator: Sync + Send + Debug {
     /// ```
     /// use std::collections::HashMap;
     /// use std::error::Error;
-    /// use optirustic::core::{EvaluationResult, Individual, Evaluator};
+    /// use nsga_rs::core::{EvaluationResult, Individual, Evaluator};
     ///
     /// // solve a SCH problem with two objectives to minimise: x^2 and (x-2)^2. The problem has
     /// // one variable named "x" and two objectives named "x^2" and "(x-2)^2".
@@ -124,7 +124,7 @@ impl TryInto<Problem> for ProblemExport {
 /// # Example
 /// ```
 ///  use std::error::Error;
-///  use optirustic::core::{BoundedNumber, Constraint, EvaluationResult, Evaluator, Individual, Objective, ObjectiveDirection, Problem, RelationalOperator, VariableType};
+///  use nsga_rs::core::{BoundedNumber, Constraint, EvaluationResult, Evaluator, Individual, Objective, ObjectiveDirection, Problem, RelationalOperator, VariableType};
 ///
 ///  // Define a one-objective one-variable problem with two constraints
 ///  let objectives = vec![Objective::new("obj1", ObjectiveDirection::Minimise)];
@@ -433,7 +433,7 @@ impl PyProblem {
     /// Get the variables as Python dictionary. The keys contain the variable name and the values
     /// the corresponding variable value.
     pub fn variables(&self) -> PyResult<Py<PyDict>> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let dict = PyDict::new(py);
             for (name, var) in &self.variables_list {
                 let var: PyVariable = var.into();
@@ -447,7 +447,7 @@ impl PyProblem {
     /// Get the objectives as Python dictionary. The keys contain the objective name and the values
     /// the corresponding objective value.
     pub fn objectives(&self) -> PyResult<Py<PyDict>> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let dict = PyDict::new(py);
             for (name, objective) in &self.objectives_list {
                 dict.set_item(name, objective.clone())?;
@@ -460,7 +460,7 @@ impl PyProblem {
     /// Get the constraints as Python dictionary. The keys contain the constraint name and the
     /// values the corresponding constraint value.
     pub fn constraints(&self) -> PyResult<Py<PyDict>> {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let dict = PyDict::new(py);
             for (name, constraint) in &self.constraints_list {
                 dict.set_item(name, constraint.clone())?;

@@ -40,7 +40,7 @@ impl ObjectiveDirection {
 ///
 /// # Example
 /// ```
-///  use optirustic::core::{Objective, ObjectiveDirection};
+///  use nsga_rs::core::{Objective, ObjectiveDirection};
 ///
 ///  let o = Objective::new("Reduce cost", ObjectiveDirection::Minimise);
 ///  println!("{}", o);

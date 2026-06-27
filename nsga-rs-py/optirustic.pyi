@@ -194,7 +194,7 @@ class AlgorithmData:
     def __init__(self, file: Path):
         """
         Initialise the NSGA2 file reader.
-        :param file: The path to the JSON file exported from optirustic Rust library.
+        :param file: The path to the JSON file exported from nsga_rs Rust library.
         """
 
     def hyper_volume(self, reference_point: list[float]) -> float:

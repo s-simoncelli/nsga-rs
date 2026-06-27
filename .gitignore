@@ -4,3 +4,4 @@ target
 *.o
 *.a
 .DS_Store
+*.venv*

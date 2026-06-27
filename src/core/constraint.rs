@@ -46,7 +46,7 @@ impl RelationalOperator {
 /// # Example
 ///
 /// ```
-///   use optirustic::core::{Constraint, RelationalOperator};
+///   use nsga_rs::core::{Constraint, RelationalOperator};
 ///   let c = Constraint::new("Z>=5.2",RelationalOperator::GreaterOrEqualTo, 5.2);
 ///   assert_eq!(c.is_met(10.1), true);
 ///   assert_eq!(c.is_met(3.11), false);

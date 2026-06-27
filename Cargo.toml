@@ -1,24 +1,32 @@
 [package]
-name = "optirustic"
+name = "nsga_rs"
 version = "1.2.2"
-authors = ["Stefano Simoncelli <16114781+s-simoncelli@users.noreply.github.com>"]
+authors = [
+    "Stefano Simoncelli <16114781+s-simoncelli@users.noreply.github.com>",
+]
 edition = "2021"
 rust-version = "1.80"
-description = "A multi-objective optimisation framework for Rust"
-repository = "https://github.com/s-simoncelli/optirustic"
-keywords = ["genetic-algorithm", "optimisation", "multiobjective", "nsga2", "nsga3"]
+description = "A Rust implementation of the NSGA family of multi-objective evolutionary algorithms"
+repository = "https://github.com/s-simoncelli/nsga_rs"
+keywords = [
+    "genetic-algorithm",
+    "optimisation",
+    "multiobjective",
+    "nsga2",
+    "nsga3",
+]
 categories = ["science", "algorithms"]
 readme = "README.md"
 license = "MIT"
 
 [workspace]
 resolver = "2"
-members = ["libs/optirustic-macros", "libs/hv-fonseca-et-al-2006-sys"]
-default-members = ["libs/optirustic-macros", "libs/hv-fonseca-et-al-2006-sys"]
-exclude = ["optirustic-py"]
+members = ["libs/nsga-rs-macros", "libs/hv-fonseca-et-al-2006-sys"]
+default-members = ["libs/nsga-rs-macros", "libs/hv-fonseca-et-al-2006-sys"]
+exclude = ["nsga-rs-py"]
 
 [lib]
-name = "optirustic"
+name = "nsga_rs"
 
 [dependencies]
 log = "0.4.21"
@@ -30,11 +38,13 @@ thiserror = "2.0.11"
 rayon = "1.10.0"
 env_logger = "0.11.3"
 chrono = { version = "0.4.38", features = ["serde"] }
-optirustic-macros = { path = "libs/optirustic-macros", version = "1.1.0" }
+nsga-rs-macros = { path = "libs/nsga-rs-macros", version = "1.1.0" }
 hv-fonseca-et-al-2006-sys = { path = "libs/hv-fonseca-et-al-2006-sys", version = "2.0.2-rc.2" }
 nalgebra = "0.33.0"
-pyo3 = { version = ">=0.23.5", optional = true, features = ["extension-module"] }
-pyo3-build-config = { version = ">=0.23.5", optional = true }
+pyo3 = { version = ">=0.27.0", optional = true, features = [
+    "extension-module",
+] }
+pyo3-build-config = { version = ">=0.27.0", optional = true }
 
 [dev-dependencies]
 float-cmp = "0.10.0"

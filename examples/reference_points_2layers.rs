@@ -1,8 +1,8 @@
 use std::env;
 use std::path::PathBuf;
 
-use optirustic::core::OError;
-use optirustic::utils::{DasDarren1998, NumberOfPartitions, TwoLayerPartitions};
+use nsga_rs::core::OError;
+use nsga_rs::utils::{DasDarren1998, NumberOfPartitions, TwoLayerPartitions};
 
 fn main() -> Result<(), OError> {
     // Consider the case of a 3D hyperplane with 3 objectives

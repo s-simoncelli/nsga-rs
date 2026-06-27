@@ -2,13 +2,16 @@ from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot as plt
-from optirustic import NSGA2
+from nsga_rs import NSGA2
 
 file = Path(__file__).parent / "results" / "SCH_2obj_NSGA2_gen250.json"
 data = NSGA2(file.as_posix())
 
 # get the list of [variable, f1, f2] values
-individuals_data = [[ind.variables["x"], ind.objectives["x^2"], ind.objectives["(x-2)^2"]] for ind in data.individuals]
+individuals_data = [
+    [ind.variables["x"], ind.objectives["x^2"], ind.objectives["(x-2)^2"]]
+    for ind in data.individuals
+]
 individuals_data = np.array(individuals_data)
 
 # Generate chart with expected vs. found solution

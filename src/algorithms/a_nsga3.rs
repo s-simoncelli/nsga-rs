@@ -29,7 +29,7 @@ impl AdaptiveNSGA3 {
 mod test_problems {
     use float_cmp::approx_eq;
 
-    use optirustic_macros::test_with_retries;
+    use nsga_rs_macros::test_with_retries;
 
     use crate::algorithms::{
         AdaptiveNSGA3, Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, StoppingCondition,

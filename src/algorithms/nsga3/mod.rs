@@ -17,7 +17,7 @@ use crate::operators::{
     Selector, SimulatedBinaryCrossover, SimulatedBinaryCrossoverArgs, TournamentSelector,
 };
 use crate::utils::{fast_non_dominated_sort, DasDarren1998, NumberOfPartitions};
-use optirustic_macros::{as_algorithm, as_algorithm_args, impl_algorithm_trait_items};
+use nsga_rs_macros::{as_algorithm, as_algorithm_args, impl_algorithm_trait_items};
 
 #[cfg(feature = "python")]
 use pyo3::exceptions::PyTypeError;
@@ -55,8 +55,9 @@ pub enum Nsga3NumberOfIndividuals {
 
 /// Convert a python object to `Nsga3NumberOfIndividuals`.
 #[cfg(feature = "python")]
-impl FromPyObject<'_> for Nsga3NumberOfIndividuals {
-    fn extract_bound(obj: &Bound<'_, PyAny>) -> PyResult<Self> {
+impl<'py> FromPyObject<'_, 'py> for Nsga3NumberOfIndividuals {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
         if obj.is_none() {
             Ok(Nsga3NumberOfIndividuals::EqualToReferencePointCount)
         } else if let Ok(x) = obj.extract::<usize>() {
@@ -125,7 +126,7 @@ impl NSGA3Arg {
     #[new]
     #[pyo3(signature = (number_of_individuals, number_of_partitions, stopping_condition, crossover_operator_options=None, mutation_operator_options=None, resume_from_file=None, parallel=None, export_history=None, seed=None))]
     fn py_new(
-        number_of_individuals: PyObject,
+        number_of_individuals: Py<PyAny>,
         number_of_partitions: NumberOfPartitions,
         stopping_condition: StoppingCondition,
         crossover_operator_options: Option<SimulatedBinaryCrossoverArgs>,
@@ -135,7 +136,7 @@ impl NSGA3Arg {
         export_history: Option<ExportHistory>,
         seed: Option<u64>,
     ) -> PyResult<Self> {
-        let number_of_individuals = Python::with_gil(|py| number_of_individuals.extract(py))?;
+        let number_of_individuals = Python::attach(|py| number_of_individuals.extract(py))?;
         Ok(NSGA3Arg {
             number_of_individuals,
             number_of_partitions,
@@ -567,7 +568,7 @@ impl Algorithm<NSGA3Arg> for NSGA3 {
 mod test_problems {
     use float_cmp::{approx_eq, assert_approx_eq};
 
-    use optirustic_macros::test_with_retries;
+    use nsga_rs_macros::test_with_retries;
 
     use crate::algorithms::{
         Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, StoppingCondition, NSGA3,

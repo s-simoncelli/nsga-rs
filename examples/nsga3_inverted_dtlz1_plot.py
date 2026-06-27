@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot as plt
-from optirustic import NSGA3
+from nsga_rs import NSGA3
 
 # Generate a 3D Pareto front charts and objective vs. reference point charts
 file = Path(__file__).parent / "results" / "DTLZ1_3obj_Adaptive_NSGA3_gen400.json"

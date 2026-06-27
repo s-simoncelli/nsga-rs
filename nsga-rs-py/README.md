@@ -1,7 +1,7 @@
-# Optirustic Py
+# nsga_rs Py
 
 This is a Python package that mainly let users import serialised data from JSON files
-exported with the `optirustic` crate.
+exported with the `nsga_rs` crate.
 
 It lets you:
 
@@ -15,25 +15,25 @@ It lets you:
 > NOTE: this pacage will not let you optimise a problem from Python, but a
 > dedicated Python wrapper can be create in Rust from a pre-defined problem.
 
-# Installation
+## Installation
 
-The package can be installed from [PyPi](https://pypi.org/project/optirustic/):
+The package can be installed from [PyPi](https://pypi.org/project/nsga_rs/):
 
 ```
-pip install optirustic
+pip install nsga-rs
 ```
 
-# Usage
+## Usage
 
-These are two example scripts to fetch data and plot the Pareto fronts of the `optirustic` example
+These are two example scripts to fetch data and plot the Pareto fronts of the `nsga_rs` example
 files
 
-## Python API
+### Python API
 
 All Python API are available in your editor via type hints:
 
 ```python
-from optirustic import NSGA3
+from nsga_rs import NSGA3
 
 # Load the NSGA3 data first
 data = NSGA3(r"../examples/results/DTLZ1_3obj_NSGA3_gen400.json")
@@ -71,11 +71,11 @@ print(f"Additional stored data: {data.individuals[0].data}")
 print(f"Hyper-volume is: {data.hyper_volume(reference_point=[100, 100, 100])}")
 ```
 
-## Generate Pareto front chart
+### Generate Pareto front chart
 
 ```python
 import matplotlib.pyplot as plt
-from optirustic import NSGA2, NSGA3
+from nsga_rs import NSGA2, NSGA3
 
 # Plot a 2D charts for a 2-objective problem
 NSGA2(r"../examples/results/SCH_2obj_NSGA2_gen250.json").plot()
@@ -91,14 +91,14 @@ plt.show()
 
 ```
 
-## Generate convergence chart
+### Generate convergence chart
 
 This template script plots the algorithm convergence by calculating
 the hyper-volumes at different generations:
 
 ```python
 import matplotlib.pyplot as plt
-from optirustic import NSGA2
+from nsga_rs import NSGA2
 
 # provide the folder where optimistic exported the JSON files
 # and a reference point to use in the hyper-volume calculation
@@ -109,15 +109,15 @@ NSGA2.plot_convergence(
 plt.show()
 ```
 
-## Generate reference points
+### Generate reference points
 
 To generate, plot and inspect the reference points for the `NSGA3` algorithm you can us:
 
-### One layer
+#### One layer
 
 ```python
 import matplotlib.pyplot as plt
-from optirustic import DasDarren1998
+from nsga_rs import DasDarren1998
 
 ds = DasDarren1998(number_of_objectives=3, number_of_partitions=5)
 points = ds.calculate()
@@ -126,11 +126,11 @@ plt.show()
 
 ```
 
-### Two layers
+#### Two layers
 
 ```python
 import matplotlib.pyplot as plt
-from optirustic import DasDarren1998
+from nsga_rs import DasDarren1998
 
 two_layers = dict(
     boundary_layer=3,
@@ -143,10 +143,10 @@ ds.plot(points)
 plt.show()
 ```
 
-## Initialise an algorithm properties
+### Initialise an algorithm properties
 
 ```python
-from optirustic import (
+from nsga_rs import (
     StoppingConditionValue,
     StoppingCondition,
     Algorithm,
@@ -168,4 +168,25 @@ print(args)
 algo = Algorithm.nsga2(args)
 print(algo)
 
+```
+
+## Development
+
+This package can be built using `maturin`. Create and activate the Python virtual environment first:
+
+```shell
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install then the dependencies using:
+
+```shell
+pip install --group dev
+```
+
+Compile the Python package using:
+
+```shell
+maturin develop
 ```
