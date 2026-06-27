@@ -1,7 +1,7 @@
 name: Build, test and publish
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
 
 env:
@@ -21,9 +21,9 @@ jobs:
       #        run: sudo apt update && sudo apt install --yes clang
       - uses: actions/checkout@v4
       - name: Build (no features)
-        run: cargo build --verbose -p optirustic
+        run: cargo build --verbose -p nsga_rs
       - name: Build (with all features)
-        run: cargo build --verbose -p optirustic --all-features
+        run: cargo build --verbose -p nsga_rs --all-features
       - name: Run tests
         run: cargo test --verbose --all
 
@@ -38,7 +38,7 @@ jobs:
       - name: cargo login
         run: cargo login ${{ secrets.CRATES_IO_API_TOKEN }}
       - name: Publish
-        run: cargo publish --verbose --no-verify -p optirustic
+        run: cargo publish --verbose --no-verify -p nsga_rs
 
 # NOTE disabled due to compiler failure in hv-fonseca crate
 #  test-windows:
