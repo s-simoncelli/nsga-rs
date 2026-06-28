@@ -25,7 +25,7 @@ jobs:
       - name: Build (with all features)
         run: cargo build --verbose -p nsga_rs --all-features
       - name: Run tests
-        run: cargo test --verbose --all
+        run: cargo test --verbose --all --all-features
 
   crates_io_publish:
     name: Publish (crates.io)
