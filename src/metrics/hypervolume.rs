@@ -463,6 +463,17 @@ impl HyperVolume {
     }
 
     #[cfg(feature = "plotting")]
+    /// Plot the convergence chart with the generation number on the x-axis and the
+    /// hyper-volume value on the y-axis
+    ///
+    /// # Arguments
+    ///
+    /// * `data` The serialised list of data from `Algorithm::read_json_files`, where
+    /// `Algorithm` is your chosen algorithm.
+    /// * `reference_point`: The reference point to use in the hyper-volume calculation
+    /// at each generation. You can use ``HyperVolume::estimate_reference_point_from_files`
+    /// to estimate it from your data.
+    /// * `destination`: The path and file name where to save the PNG file.
     pub fn plot_from_files<AlgorithmOptions: Serialize + DeserializeOwned>(
         data: &[AlgorithmSerialisedExport<AlgorithmOptions>],
         reference_point: &[f64],
