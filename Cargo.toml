@@ -23,7 +23,6 @@ license = "MIT"
 resolver = "2"
 members = ["libs/nsga-rs-macros", "libs/hv-fonseca-et-al-2006-sys"]
 default-members = ["libs/nsga-rs-macros", "libs/hv-fonseca-et-al-2006-sys"]
-exclude = ["nsga-rs-py"]
 
 [lib]
 name = "nsga_rs"
