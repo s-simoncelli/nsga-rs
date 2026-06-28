@@ -1,10 +1,12 @@
 use std::env;
+use std::error::Error;
 use std::path::PathBuf;
 
-use nsga_rs::core::OError;
+use gnuplot::PlotOption::{Color, PointSymbol};
+use gnuplot::{AxesCommon, Figure};
 use nsga_rs::utils::{DasDarren1998, NumberOfPartitions, TwoLayerPartitions};
 
-fn main() -> Result<(), OError> {
+fn main() -> Result<(), Box<dyn Error>> {
     // Consider the case of a 3D hyperplane with 3 objectives
     let number_of_objectives = 3;
     let layers = TwoLayerPartitions {
@@ -29,7 +31,49 @@ fn main() -> Result<(), OError> {
         .join("ref_points_2layers_3obj_5gaps.json");
     DasDarren1998::serialise(&weights, &out_path)?;
 
-    // You can plot the data by running reference_points_2layers_plot.py
+    // Plot the points
+    // group by objective
+    let mut weights_by_objectives = vec![vec![]; number_of_objectives];
+    for weight_point in weights.into_iter() {
+        for obj_num in 0..number_of_objectives {
+            weights_by_objectives[obj_num].push(weight_point[obj_num]);
+        }
+    }
+
+    let mut fg = Figure::new();
+    fg.axes3d()
+        .points(
+            &weights_by_objectives[0],
+            &weights_by_objectives[1],
+            &weights_by_objectives[2],
+            &[PointSymbol('O'), Color("black".into())],
+        )
+        .set_x_label("Objective 1", &[])
+        .set_y_label("Objective 2", &[])
+        .set_z_label("Objective 3", &[])
+        .set_x_grid(true)
+        .set_y_grid(true)
+        .set_z_grid(true)
+        .set_x_range(gnuplot::AutoOption::Fix(0.0), gnuplot::AutoOption::Fix(1.0))
+        .set_y_range(gnuplot::AutoOption::Fix(0.0), gnuplot::AutoOption::Fix(1.0))
+        .set_z_range(gnuplot::AutoOption::Fix(0.0), gnuplot::AutoOption::Fix(1.0))
+        .set_view(60.0, 110.0)
+        .set_title(
+            &format!(
+                "Reference points - Das & Darren (2019)\n{} objectives",
+                number_of_objectives
+            ),
+            &[],
+        );
+
+    fg.save_to_png(
+        &out_path
+            .parent()
+            .unwrap()
+            .join("ref_points_2layers_3obj_5gaps.png"),
+        800,
+        600,
+    )?;
 
     Ok(())
 }

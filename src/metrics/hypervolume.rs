@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+#[cfg(feature = "plotting")]
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
@@ -148,7 +150,7 @@ pub struct HyperVolumeFileData {
     pub value: f64,
 }
 
-/// The vector with hyper-volume data from multile files
+/// The vector with hyper-volume data from multiple files
 pub struct AllHyperVolumeFileData(Vec<HyperVolumeFileData>);
 
 impl AllHyperVolumeFileData {
@@ -458,6 +460,43 @@ impl HyperVolume {
         // add or remove offset
         let ref_point = HyperVolume::add_offset(&ref_point, offset, &problem)?;
         Ok(ref_point)
+    }
+
+    #[cfg(feature = "plotting")]
+    pub fn plot_from_files<AlgorithmOptions: Serialize + DeserializeOwned>(
+        data: &[AlgorithmSerialisedExport<AlgorithmOptions>],
+        reference_point: &[f64],
+        destination: &PathBuf,
+    ) -> Result<(), OError> {
+        use gnuplot::{AxesCommon, Figure, PlotOption::Color};
+
+        let hv_data = HyperVolume::from_files(data, reference_point)?;
+        let gen_1_data = data.get(0).expect("Cannot find 1st generation");
+
+        let mut fg = Figure::new();
+        fg.axes2d()
+            .lines_points(
+                hv_data.generations(),
+                hv_data.values(),
+                &[Color("black".into())],
+            )
+            .set_x_grid(true)
+            .set_y_grid(true)
+            .set_x_label("Generation", &[])
+            .set_y_label("Hyper volume", &[])
+            .set_title(
+                &format!(
+                    "Hypervolume for {} - Pop size {}",
+                    gen_1_data.algorithm,
+                    gen_1_data.individuals.len(),
+                ),
+                &[],
+            );
+        fg.save_to_png(destination, 800, 600).map_err(|e| {
+            OError::Generic(format!("Cannot save the chart because {}", e.to_string()))
+        })?;
+
+        Ok(())
     }
 }
 

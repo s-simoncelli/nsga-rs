@@ -98,6 +98,94 @@ impl<T: Serialize> AlgorithmSerialisedExport<T> {
 
         Ok(individuals)
     }
+
+    #[cfg(feature = "plotting")]
+    /// Plot the Pareto front from the results.
+    ///
+    /// # Arguments
+    ///
+    /// * `destination`: The path and file name where to save the PNG file.
+    /// * `fig_size`: An optional argument to change the figure size. When `None` this
+    /// defaults to [800, 500] px.
+    ///
+    /// returns: `Result<f64, OError>`
+    pub fn plot_front(
+        &self,
+        destination: &PathBuf,
+        fig_size: Option<[u32; 2]>,
+    ) -> Result<(), OError> {
+        use gnuplot::AxesCommon;
+        use gnuplot::{
+            Figure,
+            PlotOption::{Color, PointSymbol},
+        };
+
+        let fig_size = fig_size.unwrap_or([800, 500]);
+        let title = format!(
+            "Results for {} @ generation={} \nPopulation size={}",
+            self.algorithm,
+            self.generation,
+            self.individuals.len()
+        );
+        let obj_count = self.problem.number_of_objectives;
+        let obj_names = self.problem.objective_names.clone();
+        let mut fg = Figure::new();
+        let point_style = [PointSymbol('O'), Color("black".into())];
+
+        if obj_count >= 2 && obj_count <= 3 {
+            let obj1_name = obj_names.get(0).unwrap();
+            let obj2_name = obj_names.get(1).unwrap();
+
+            let obj1: Vec<f64> = self
+                .individuals()?
+                .iter()
+                .map(|i| i.get_objective_value(obj1_name).unwrap())
+                .collect();
+            let obj2: Vec<f64> = self
+                .individuals()?
+                .iter()
+                .map(|i| i.get_objective_value(obj2_name).unwrap())
+                .collect();
+
+            if obj_count == 2 {
+                fg.axes2d()
+                    .points(obj1, obj2, &point_style)
+                    .set_x_label(obj1_name, &[])
+                    .set_y_label(obj2_name, &[])
+                    .set_x_grid(true)
+                    .set_y_grid(true)
+                    .set_title(&title, &[]);
+            } else {
+                let obj3_name = obj_names.get(2).unwrap();
+                let obj3: Vec<f64> = self
+                    .individuals()?
+                    .iter()
+                    .map(|i| i.get_objective_value(obj3_name).unwrap())
+                    .collect();
+                fg.axes3d()
+                    .points(obj1, obj2, obj3, &point_style)
+                    .set_x_label(obj1_name, &[])
+                    .set_y_label(obj2_name, &[])
+                    .set_z_label(obj3_name, &[])
+                    .set_x_grid(true)
+                    .set_y_grid(true)
+                    .set_z_grid(true)
+                    .set_view(40.0, 110.0)
+                    .set_title(&title, &[]);
+            }
+
+            return fg
+                .save_to_png(destination, fig_size[0], fig_size[1])
+                .map_err(|e| {
+                    OError::Generic(format!("Cannot save the chart because {}", e.to_string()))
+                });
+        } else {
+            return Err(OError::Generic(
+                "Plotting of Pareto front is only supported for a 2 or 3-objective problem"
+                    .to_string(),
+            ));
+        }
+    }
 }
 
 /// Convert the [`AlgorithmSerialisedExport`] to [`AlgorithmExport`]
@@ -116,6 +204,27 @@ impl<T: Serialize> TryInto<AlgorithmExport> for AlgorithmSerialisedExport<T> {
         };
         Ok(data)
     }
+}
+
+/// The enum to determine how to group vectorial results.
+pub enum ExportVecGroupBy {
+    /// Return a vector reporting the results for each individual. The length of each
+    /// nested vector equals the number of objectives.
+    Individual,
+    /// Return a vector reporting the results for each objective. The length of each
+    /// nested vector equals the number of individuals in the population.
+    Objective,
+}
+
+/// The type of reference points used in the [`AdaptiveNSGA3`]
+pub struct ReferencePointType {
+    /// The location of the original reference points (i.e. the points that were used
+    /// to initialise the algorithm). These are the points that are always preserved
+    /// during the optimisation.
+    pub original: Vec<Vec<f64>>,
+    /// The new points that were added along with the original point to reduce crowding
+    /// and to allocate one point for each Pareto-optimal solution.
+    pub new: Vec<Vec<f64>>,
 }
 
 /// The struct used to export an algorithm data.
@@ -153,6 +262,21 @@ impl AlgorithmExport {
             .collect()
     }
 
+    /// Get the numbers stored in an objective for all individuals. This returns an error if the
+    /// objective does not exist.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: The objective name.
+    ///
+    /// returns: `Result<f64, OError>`
+    pub fn get_objective(&self, name: &str) -> Result<Vec<f64>, OError> {
+        self.individuals
+            .iter()
+            .map(|i| i.get_objective_value(name))
+            .collect()
+    }
+
     /// Get the objective values grouped by objective name.
     ///
     /// returns: `Result<HashMap<String, Vec<f64>>, OError>`
@@ -167,6 +291,173 @@ impl AlgorithmExport {
             map.insert(name, data_vec);
         }
         Ok(map)
+    }
+
+    /// Reshape a vector containing data for each individuals [NxM] into a vector containing data
+    /// for each objective [MxN].
+    fn group_by_objective(&self, vector: Vec<Vec<f64>>) -> Result<Vec<Vec<f64>>, OError> {
+        let mut vector_by_objectives = vec![vec![]; self.problem.number_of_objectives()];
+        for ind_objectives in vector.into_iter() {
+            for obj_num in 0..self.problem.number_of_objectives() {
+                let value = ind_objectives.get(obj_num);
+                match value {
+                    Some(v) => vector_by_objectives[obj_num].push(v.clone()),
+                    None => {
+                        return Err(OError::Generic(format!("Cannot group objective {obj_num}")));
+                    }
+                }
+            }
+        }
+        Ok(vector_by_objectives)
+    }
+
+    /// Get the values of the normalised objective derived using the NSGA3 algorithm. This
+    /// will return an error if the results were derived using another algorithm.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_by`: Determine how the results are returned. When [`ExportVecGroupBy::Individual`],
+    /// this returns a vector of vectors. The main vector have size equal to the number of
+    /// individuals and the nested vectors have length equal to the objective number. When
+    /// [`ExportVecGroupBy::Objective`], the vector is reshaped so that the main vector
+    /// have size equal to the number of objectives and the nested vector length equal to
+    /// the number of individuals.
+    ///
+    /// returns `Result<Vec<Vec<f64>>, OError>`: The vector with the value of the normalised
+    /// objectives. The data is grouped based on the `group_by` value.
+    pub fn get_nsga3_normalised_objectives(
+        &self,
+        group_by: ExportVecGroupBy,
+    ) -> Result<Vec<Vec<f64>>, OError> {
+        if self.algorithm != "NSGA3" {
+            return Err(OError::Generic(
+                "The exported data were not derived using NSGA3".to_string(),
+            ));
+        }
+
+        let mut all_normalised_objectives_per_ind = Vec::new();
+        for ind in self.individuals.iter() {
+            all_normalised_objectives_per_ind
+                .push(ind.get_data("normalised_objectives")?.as_f64_vec()?.clone());
+        }
+
+        let results = match group_by {
+            ExportVecGroupBy::Individual => all_normalised_objectives_per_ind,
+            //  self.group_by_objective(all_normalised_objectives_per_ind)?
+            ExportVecGroupBy::Objective => {
+                let mut all_normalised_objectives =
+                    vec![vec![]; self.problem.number_of_objectives()];
+                for ind_objectives in all_normalised_objectives_per_ind.into_iter() {
+                    for obj_num in 0..self.problem.number_of_objectives() {
+                        let value = ind_objectives.get(obj_num);
+                        match value {
+                            Some(v) => all_normalised_objectives[obj_num].push(v.clone()),
+                            None => {
+                                return Err(OError::Generic(format!(
+                                    "Cannot group objective {obj_num}"
+                                )));
+                            }
+                        }
+                    }
+                }
+                all_normalised_objectives
+            }
+        };
+        Ok(results)
+    }
+
+    /// Get the values of the reference points used by the NSGA3 algorithm. This
+    /// will return an error if the results were derived using another algorithm.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_by`: Determine how the results are returned. When [`ExportVecGroupBy::Individual`],
+    /// this returns a vector of vectors. The main vector have size equal to the number of
+    /// individuals and the nested vectors have length equal to the objective number. When
+    /// [`ExportVecGroupBy::Objective`], the vector is reshaped so that the main vector
+    /// have size equal to the number of objectives and the nested vector length equal to
+    /// the number of individuals.
+    ///
+    /// returns `Result<Vec<Vec<f64>>, OError>`: The vector with the value of the reference
+    /// points. The data is grouped based on the `group_by` value.
+    pub fn get_nsga3_reference_points(
+        &self,
+        group_by: ExportVecGroupBy,
+    ) -> Result<Vec<Vec<f64>>, OError> {
+        if self.algorithm != "NSGA3" {
+            return Err(OError::Generic(
+                "The exported data were not derived using NSGA3".to_string(),
+            ));
+        }
+
+        let ref_points_per_ind = match self.additional_data.get("reference_points") {
+            Some(values) => {
+                let mut ref_points = vec![];
+                for point_vec in values.as_data_vec()?.into_iter() {
+                    ref_points.push(point_vec.as_f64_vec()?.clone());
+                }
+                ref_points
+            }
+            None => {
+                return Err(OError::Generic(format!("Cannot group reference_points")));
+            }
+        };
+
+        let results: Vec<Vec<f64>> = match group_by {
+            ExportVecGroupBy::Individual => ref_points_per_ind,
+            ExportVecGroupBy::Objective => self.group_by_objective(ref_points_per_ind)?,
+        };
+        Ok(results)
+    }
+
+    /// Get the values of the reference points used by the adaptive NSGA3 algorithm. This
+    /// function returns to group of points:
+    /// - original point: these are the points that were used to initialise the algorithm
+    /// and that are always preserved during the optimisation.
+    /// - adaptive points: the new points that were added along with the original point
+    /// to reduce crowding and to allocate one point for each Pareto-optimal solution.
+    ///
+    /// This will return an error if the results were derived using another algorithm.
+    ///
+    /// # Arguments
+    ///
+    /// * `group_by`: Determine how the results are returned. When [`ExportVecGroupBy::Individual`],
+    /// this returns a vector of vectors. The main vector have size equal to the number of
+    /// individuals and the nested vectors have length equal to the objective number. When
+    /// [`ExportVecGroupBy::Objective`], the vector is reshaped so that the main vector
+    /// have size equal to the number of objectives and the nested vector length equal to
+    /// the number of individuals.
+    ///
+    /// returns `Result<Vec<Vec<f64>>, OError>`: The vector with the value of the reference
+    /// points. The data is grouped based on the `group_by` value.
+    pub fn get_adaptive_nsga3_reference_points(
+        &self,
+        group_by: ExportVecGroupBy,
+    ) -> Result<ReferencePointType, OError> {
+        let mut ref_points = self.get_nsga3_reference_points(ExportVecGroupBy::Individual)?;
+        // split using the original number of points
+        let original_point_count = match self.additional_data.get("number_of_reference_points") {
+            Some(count) => count.as_real()?, // NOTE: this is deserialised as real
+            None => {
+                return Err(OError::Generic(
+                    "Cannot find additional_data.number_of_reference_points".to_string(),
+                ))
+            }
+        };
+        let adaptive_points = ref_points.split_off(original_point_count as usize);
+
+        let result = match group_by {
+            ExportVecGroupBy::Individual => ReferencePointType {
+                original: ref_points,
+                new: adaptive_points,
+            },
+            ExportVecGroupBy::Objective => ReferencePointType {
+                original: self.group_by_objective(ref_points)?,
+                new: self.group_by_objective(adaptive_points)?,
+            },
+        };
+
+        Ok(result)
     }
 }
 
