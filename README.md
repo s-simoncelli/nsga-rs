@@ -1,45 +1,48 @@
 # NSGA RS
 
-[![Package](https://img.shields.io/crates/v/nsga_rs.svg)](https://crates.io/crates/nsga_rs)
-[![Documentation](https://docs.rs/nsga_rs/badge.svg)](https://docs.rs/nsga_rs)
+[![Crates.io](https://img.shields.io/crates/v/nsga_rs.svg)](https://crates.io/crates/nsga_rs)
+[![Documentation](https://docs.rs/nsga_rs/badge.svg)](https://docs.rs/optirustic)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
 
-<p align="center">
-    <img src="examples/results/SCH_2obj_NSGA2_Pareto_front.png" width="300" alt="Results" hspace="10"/>
-    <img src="examples/results/DTLZ1_3obj_NSGA3_gen400_Pareto_front.png" width="300" alt="Results" />
-</p>
+**NSGA RS** is a Rust framework for solving multi-objective optimisation problems using the
+NSGA family of multi-objective evolutionary algorithms (MOEAs). It gives you fast, parallel, and fully serialisable optimisation pipelines — from problem definition through to Pareto-front visualisation.
 
-nsga_rs is a framework written in Rust that provides multi-objective evolutionary algorithms based on the NSGA family and analysis tool to solve multi-objective problems. It allows you to:
+|                     NSGA2 — 2-objective Schaffer                      |                            NSGA3 — 3-objective DTLZ1                             |
+| :-------------------------------------------------------------------: | :------------------------------------------------------------------------------: |
+| ![SCH Pareto front](examples/results/SCH_2obj_NSGA2_Pareto_front.png) | ![DTLZ1 Pareto front](examples/results/DTLZ1_3obj_NSGA3_gen400_Pareto_front.png) |
 
-- define minimisation and maximisation problems with custom objective functions;
-- define constraint and unconstrained variables (real, integer, boolean or choice);
-- use multi-thread to evaluate objectives and constraints on population with many individuals
-- export the population history as JSON and resume its evolution from file
-- generate charts with the dedicated [Python package](https://pypi.org/project/nsga_rs/)
+---
 
-The library comes with the following
-algorithms: [`NSGA2`](https://docs.rs/nsga_rs/latest/nsga_rs/algorithms/struct.NSGA2.html),
-[`NSGA3`](https://docs.rs/nsga_rs/latest/nsga_rs/algorithms/struct.NSGA3.html) and
-[`AdaptiveNSGA3`](https://docs.rs/nsga_rs/latest/nsga_rs/algorithms/struct.AdaptiveNSGA3.html).
+## Features
 
-The API documentation is available on [docs.rs](https://docs.rs/nsga_rs/).
-Examples showcasing this library's features are available in
-the [examples folder of this repository](examples/nsga2_sch.rs).
+- **Three built-in algorithms** — `NSGA2` ([Deb et al, 2002](https://doi.org/10.1109/4235.996017)), `NSGA3` ([Deb & Jain, 2014](https://10.1109/TEVC.2013.2281535)), and `AdaptiveNSGA3` ([Jain et al, 2014](doi.org/10.1109/TEVC.2013.2281534))
+- **Flexible problem definition** — minimise or maximise any number of objectives; constrained or unconstrained
+- **Rich variable types** — real, integer, boolean, and categorical (choice) variables, each with optional bounds
+- **Parallel evaluation** — multi-threaded objective and constraint evaluation via Rayon
+- **Resumable runs** — export the full population history as JSON and resume from any checkpoint
+- **Python bindings** — exposes a PyO3 interface so you can wrap the library in your own Python package
+- **Hypervolume metric** — calculate hypervolume directly from individuals, values, or serialised JSON files
+- **Flexible stopping conditions** — stop by generation count, function evaluations, elapsed time, or combinations using `Any` / `All`
 
-## Installing nsga_rs
+---
 
-nsga_rs is available on [crates.io](https://crates.io/crates/nsga_rs). The
-recommended way to use it is to add a line into your Cargo.toml:
+## Installation
+
+Add the crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 nsga_rs = "*"
 ```
 
-## Example
+---
 
-### Problem definition
+## Quick Start
 
-In this example, we are going to solve the Schaffer’s problem with the `NSGA2` algorithm.
+The example below solves Schaffer's problem, a classic 2-objective test, using `NSGA2`.
+
+### 1. Define the problem
+
 The problem aims to minimise the following 2 objectives:
 
 - f<sub>1</sub>(x) = x<sup>2</sup>
@@ -48,7 +51,7 @@ The problem aims to minimise the following 2 objectives:
 The problem has 1 variable (`x`) bounded to `-1000` and `1000`. The optional solution is expected
 to lie in the `[0; 2]` range.
 
-### Problem implementation
+### 2. Problem implementation
 
 The problem is implemented below using the `SCHProblem` struct. When an algorithm runs,
 it first generates a set of potential solutions for the problem variables (in this case `x`). It
@@ -107,9 +110,7 @@ impl Evaluator for SCHProblem {
 }
 ```
 
-<p align="right">(<a href="#nsga_rs">back to top</a>)</p>
-
-### Setup and run the genetic algorithm
+### 2. Configure and run the algorithm
 
 The code below set up the `NSGA2` algorithm with `100` individuals and will
 stop when `250` population generations are reached.
@@ -117,7 +118,7 @@ stop when `250` population generations are reached.
 ```rust
 ...
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Setup the NSGA2 algorithm
     let args = NSGA2Arg {
         // use 100 individuals and stop the algorithm at 250 generations
@@ -135,44 +136,61 @@ fn main() -> Result<(), Box<dyn Error>> {
         seed: Some(10),
     };
     let mut algo = NSGA2::new(problem, args)?;
-
     // run the algorithm
     algo.run()?;
 
-    // Export serialised results at last generation
+    // Export the final population to JSON
     algo.save_to_json(&PathBuf::from("."), Some("SCH_2obj"))?;
-
     Ok(())
 }
 ```
 
-The full example is available in the [examples folder of this repository](examples/nsga2_sch.rs) and can be
-run using
+Run it with:
 
-> cargo run --example nsga2_sch --release
+```sh
+cargo run --example nsga2_sch --release
+```
 
-This is the serialised data exported by the
-algorithm: [SCH_2obj_NSGA2_gen250.json](examples/results/SCH_2obj_NSGA2_gen250.json)
-and these are the plotted solutions:
+The algorithm exports a JSON file (e.g. `SCH_2obj_NSGA2_gen250.json`) containing the full population.
 
-<div style="text-align: center">
-    <img src="examples/results/SCH_2obj_NSGA2_solutions.png" width="300" alt="Results" />
-</div>
+![SCH solutions](examples/results/SCH_2obj_NSGA2_solutions.png)
 
-<p align="right">(<a href="#nsga_rs">back to top</a>)</p>
+All examples live in the [`examples/`](examples/) folder and can be run with `cargo run --example <name> --release`.
+
+## Algorithms
+
+| Algorithm       | Description                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------- |
+| `NSGA2`         | Non-dominated Sorting Genetic Algorithm II — fast, crowding-distance-based ranking                          |
+| `NSGA3`         | Reference-point-based NSGA for many-objective problems                                                      |
+| `AdaptiveNSGA3` | Adaptive variant (Jain & Deb, 2014) for problems where not all reference points intersect the optimal front |
+
+Full API documentation is on [docs.rs](https://docs.rs/optirustic/).
+
+## Stopping Conditions
+
+Runs can be stopped by:
+
+- **`MaxGeneration`** — a fixed number of generations
+- **`MaxFunctionEvaluations`** — a total number of objective evaluations
+- **`Elapsed`** — a wall-clock duration
+- **`Any` / `All`** — combine multiple conditions with OR / AND logic
+
+## Exporting & Resuming
+
+Set `export_history` in the algorithm args to write JSON snapshots at regular intervals, or call `save_to_json` once at the end. To resume from a checkpoint, pass the snapshot path via `resume_from_file`.
 
 ### Plotting and inspecting data
 
-With the library, you can set
-the [`export_history`](https://docs.rs/nsga_rs/latest/nsga_rs/algorithms/struct.NSGA2Arg.html#structfield.export_history)
-option, to export serialised results as JSON files as the algorithm evolves, or
-call [`save_to_json`](https://docs.rs/nsga_rs/latest/nsga_rs/algorithms/trait.Algorithm.html#method.save_to_json)
-to export the results at the last population evolution.
+With the library, you can:
 
-This crate comes with a companion [Python package](./nsga-rs-py) to inspect the results
-and easily plot the Pareto front or the algorithm convergence. This is how all the charts within
-this README file were generated. Have a look at the `py` file in the [example folder](./examples).
+- plot the Pareto front chart for problems with 2 or 3 objectives from the exported data. Check out the [SCH solved with NSGA2](examples/nsga2_sch.rs) or [DTLZ1 solved with NSGA3](examples/nsga2_dtlz1.rs) or [inverted DTLZ1 solved with Adaptive NSGA3](examples/adaptive_nsga3_inverted_dtlz1).
+- plot the hyper-volume metric to track convergence using `Hypervolume::plot_from_files`. Check out the [convergence example](examples/convergence.rs).
 
-# License
+## Python Bindings
 
-This project is licensed under the terms of the MIT license.
+The library includes a [PyO3](https://pyo3.rs/) interface, so you can bundle it into your own Python package using [Maturin](https://www.maturin.rs/). There is no pre-built package on PyPI, the bindings are provided as a starting point for you to build and distribute as needed.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE.txt).

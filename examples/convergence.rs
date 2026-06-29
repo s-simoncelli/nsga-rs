@@ -67,5 +67,18 @@ fn main() -> Result<(), OError> {
     println!("Hyper-volumes generations: {:?}", hvs.generations());
     println!("Hyper-volumes values: {:?}", hvs.values());
 
+    // plot the convergence/hyper-volume chart
+    let serialised_data = NSGA2::read_json_files(&out_path)?;
+    let ref_point = HyperVolume::estimate_reference_point_from_files(&serialised_data, None)?;
+
+    HyperVolume::plot_from_files(
+        &serialised_data,
+        &ref_point,
+        &out_path
+            .parent()
+            .unwrap()
+            .join("SCH_2obj_NSGA2_convergence_chart.png"),
+    )?;
+
     Ok(())
 }

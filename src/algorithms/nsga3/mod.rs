@@ -217,9 +217,9 @@ impl NSGA3 {
     /// To improve the solutions for these kind of problems, when this option is set to `true`, new
     /// reference points will adaptively be added around the provided points to reduce crowding and
     /// force one solution to be associated to preferably only on reference direction.
-    /// This option converts `NSGA3` to [`crate::algorithms::AdaptiveNSGA3`] (where `A` stands for
-    /// adaptive) and it is explained in Section VII of Jain and Deb (2013). For a detailed
-    /// explanation about the implementation see `AdaptiveReferencePoints`.
+    /// This option converts `NSGA3` to [`crate::algorithms::AdaptiveNSGA3`] as  explained
+    /// in Section VII of Jain and Deb (2013). For a detailed explanation about the
+    /// implementation see [`AdaptiveReferencePoints`].
     ///
     /// returns: `NSGA3`.
     pub fn new(problem: Problem, options: NSGA3Arg, adaptive: bool) -> Result<Self, OError> {
@@ -559,6 +559,10 @@ impl Algorithm<NSGA3Arg> for NSGA3 {
         data.insert(
             "ideal_point".to_string(),
             DataValue::Vector(self.ideal_point.clone()),
+        );
+        data.insert(
+            "number_of_reference_points".to_string(),
+            DataValue::USize(self.number_of_or_reference_points),
         );
         Some(data)
     }
