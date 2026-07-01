@@ -403,7 +403,7 @@ impl Problem {
 /// Python interface for data held by [`Problem`]. This uses a separate class as some Rust struct
 /// cannot be directly converted into Python objects.
 #[cfg(feature = "python")]
-#[pyclass(name = "Problem", get_all)]
+#[pyclass(name = "Problem", get_all, from_py_object)]
 #[derive(Clone)]
 pub struct PyProblem {
     /// The vector og objectives.

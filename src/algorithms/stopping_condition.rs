@@ -7,7 +7,7 @@ use pyo3::prelude::*;
 /// The type of stopping condition. Pick one type to inform the algorithm how/when it should
 /// terminate the population evolution.
 #[derive(Serialize, Deserialize, Clone)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(from_py_object))]
 pub enum StoppingCondition {
     /// Set a maximum duration (as number of minutes).
     MaxDurationAsMinutes(u32),
@@ -89,7 +89,7 @@ pub mod py {
 
     /// The stopping condition class in Python. Each enum item is a Python function of the
     /// StoppingConditionValue class. Items are lower-case to be PEP compliant.
-    #[pyclass(name = "StoppingConditionValue")]
+    #[pyclass(name = "StoppingConditionValue", from_py_object)]
     #[derive(Clone)]
     #[allow(non_camel_case_types)]
     pub enum PyStoppingConditionValue {
