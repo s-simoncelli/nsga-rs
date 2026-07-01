@@ -19,15 +19,19 @@ jobs:
       #          override: true
       #      - name: Install Clang
       #        run: sudo apt update && sudo apt install --yes clang
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
       - name: Build (no features)
         run: cargo build --verbose -p nsga_rs
       - name: Install gnuplot
         run: sudo apt-get update && sudo apt-get install gnuplot
-      - name: Build (with all features)
-        run: cargo build --verbose -p nsga_rs --all-features
-      - name: Run tests
-        run: cargo test --verbose --all --all-features
+      - name: Build (with plotting)
+        run: cargo build --verbose -p nsga_rs --features plotting
+      - name: Run tests (rust)
+        run: cargo test --verbose --all --features plotting
+      - name: Set up Python
+        uses: actions/setup-python@v6.3.0
+      - name: Run tests (python)
+        run: cargo test --verbose --package nsga_rs --lib --no-default-features --features python-test  -- 'algorithms::algorithm::test_python_api'
 
   crates_io_publish:
     name: Publish (crates.io)

@@ -86,7 +86,7 @@ impl<'py> IntoPyObject<'py> for Nsga3NumberOfIndividuals {
 
 /// Input arguments for the NSGA3 algorithm.
 #[as_algorithm_args]
-#[cfg_attr(feature = "python", pyclass(get_all))]
+#[cfg_attr(feature = "python", pyclass(get_all, from_py_object))]
 pub struct NSGA3Arg {
     /// The number of individuals in the population.
     pub number_of_individuals: Nsga3NumberOfIndividuals,
@@ -567,6 +567,10 @@ impl Algorithm<NSGA3Arg> for NSGA3 {
         Some(data)
     }
 }
+
+// Export data reader `NSGA3Data` for Python support
+#[cfg(feature = "python")]
+crate::algorithms::create_py_reader_interface!(NSGA3Data, NSGA3, NSGA3Arg);
 
 #[cfg(test)]
 mod test_problems {
