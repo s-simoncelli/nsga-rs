@@ -18,7 +18,7 @@ pub struct NonDominatedSortResults {
 }
 
 /// The data key where the rank is stored for each [`Individual`].
-const RANK_KEY: &str = "rank";
+pub const RANK_KEY: &str = "rank";
 
 /// Non-dominated fast sorting from NSGA2 paper (with complexity $O(M * N^2)$, where `M` is the
 /// number of objectives and `N` the number of individuals).
