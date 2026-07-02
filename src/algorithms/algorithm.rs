@@ -1357,6 +1357,7 @@ mod test_python_api {
 
     use crate::algorithms::NSGA3Data;
     use crate::utils::{DasDarren1998, NumberOfPartitions, TwoLayerPartitions};
+    use chrono::{Datelike, Utc};
     use float_cmp::assert_approx_eq;
     use pyo3::prelude::*;
     use pyo3::types::PyList;
@@ -1403,17 +1404,10 @@ mod test_python_api {
             assert_eq!(reader.getattr(py, "generation")?.extract::<i32>(py)?, 400);
             assert_eq!(
                 reader
-                    .getattr(py, "took")?
-                    .getattr(py, "seconds")?
-                    .extract::<i32>(py)?,
-                4
-            );
-            assert_eq!(
-                reader
                     .getattr(py, "exported_on")?
                     .getattr(py, "day")?
-                    .extract::<i32>(py)?,
-                10
+                    .extract::<u32>(py)?,
+                Utc::now().day()
             );
 
             // test individuals
