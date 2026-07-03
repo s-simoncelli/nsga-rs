@@ -28,10 +28,16 @@ jobs:
         run: cargo build --verbose -p nsga_rs --features plotting
       - name: Run tests (rust)
         run: cargo test --verbose --all --features plotting
+
+  test-python:
+    name: Test Python API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.0
       - name: Set up Python
         uses: actions/setup-python@v6.3.0
       - name: Run tests (python)
-        run: git reset --hard HEAD && cargo test --verbose --package nsga_rs --lib --no-default-features --features python-test  -- 'algorithms::algorithm::test_python_api'
+        run: cargo test --verbose --package nsga_rs --lib --no-default-features --features python-test  -- 'algorithms::algorithm::test_python_api'
 
   crates_io_publish:
     name: Publish (crates.io)
