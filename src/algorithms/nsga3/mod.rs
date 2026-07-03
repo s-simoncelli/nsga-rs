@@ -292,7 +292,7 @@ impl NSGA3 {
             )?
         } else {
             info!("Created initial random population");
-            Population::init(problem.clone(), number_of_individuals)
+            Population::init(problem.clone(), number_of_individuals)?
         };
 
         let selector_operator = TournamentSelector::<ParetoConstrainedDominance>::new(2);

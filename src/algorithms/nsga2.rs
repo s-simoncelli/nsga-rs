@@ -161,7 +161,7 @@ impl NSGA2 {
             )?
         } else {
             info!("Created initial random population");
-            Population::init(problem.clone(), options.number_of_individuals)
+            Population::init(problem.clone(), options.number_of_individuals)?
         };
 
         let mutation_options = match options.mutation_operator_options {
