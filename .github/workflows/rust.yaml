@@ -31,7 +31,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6.3.0
       - name: Run tests (python)
-        run: cargo test --verbose --package nsga_rs --lib --no-default-features --features python-test  -- 'algorithms::algorithm::test_python_api'
+        run: git reset --hard HEAD && cargo test --verbose --package nsga_rs --lib --no-default-features --features python-test  -- 'algorithms::algorithm::test_python_api'
 
   crates_io_publish:
     name: Publish (crates.io)
