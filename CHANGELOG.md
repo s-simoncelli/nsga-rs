@@ -37,6 +37,7 @@
 - Added git-cliff to bump version and generate changelog file
 - Added new publish CI to bump version, generate changelog and publish crate
 - Fixed publish CI to calculate tag on bump
+- Tag repo in publish CI
 ## [1.2.2] - 2025-03-22
 
 ### 🚀 Features
