@@ -42,7 +42,7 @@ jobs:
 
       - name: Generate release with git-cliff
         run: |
-          git cliff --bump --tag
+          git cliff --bump
 
       - name: Record new tag
         id: after
