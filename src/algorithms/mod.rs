@@ -2,7 +2,7 @@ pub use a_nsga3::AdaptiveNSGA3;
 pub use algorithm::{
     Algorithm, AlgorithmExport, AlgorithmSerialisedExport, ExportHistory, ExportVecGroupBy,
 };
-pub use nsga2::{NSGA2Arg, NSGA2};
+pub use nsga2::{NSGA2Arg, CROWDING_DIST_KEY, NSGA2};
 pub use nsga3::{NSGA3Arg, Nsga3NumberOfIndividuals, NSGA3};
 pub use stopping_condition::StoppingCondition;
 

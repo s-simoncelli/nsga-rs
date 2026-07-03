@@ -8,7 +8,7 @@ use std::sync::Arc;
 use pyo3::prelude::*;
 
 use crate::core::{DataValue, OError, Problem, VariableValue};
-use crate::utils::hasmap_eq_with_nans;
+use crate::utils::{hasmap_eq_with_nans, vector_max, vector_min};
 
 /// An individual in the population containing the problem solution, and the objective and
 /// constraint values.
@@ -661,13 +661,18 @@ impl Population {
     /// * `problem`: The problem being solved.
     /// * `number_of_individuals`: The number of individuals to add to the population.
     ///
-    /// returns: `Population`
-    pub fn init(problem: Arc<Problem>, number_of_individuals: usize) -> Self {
+    /// returns: `Result<Population, OError>`
+    pub fn init(problem: Arc<Problem>, number_of_individuals: usize) -> Result<Self, OError> {
+        if number_of_individuals == 0 {
+            return Err(OError::Generic(
+                "The number of individuals must be larger than 0".to_string(),
+            ));
+        }
         let mut population: Vec<Individual> = vec![];
         for _ in 0..number_of_individuals {
             population.push(Individual::new(problem.clone()));
         }
-        Self(population)
+        Ok(Self(population))
     }
 
     /// Serialise the individuals for export.
@@ -703,6 +708,8 @@ pub trait Individuals {
     fn individual(&self, index: usize) -> Result<&Individual, OError>;
     fn objective_values(&self, name: &str) -> Result<Vec<f64>, OError>;
     fn to_real_vec(&self, name: &str) -> Result<Vec<f64>, OError>;
+    fn get_max_objectives(&self) -> Result<Vec<f64>, OError>;
+    fn get_min_objectives(&self) -> Result<Vec<f64>, OError>;
 }
 
 pub trait IndividualsMut {
@@ -747,6 +754,55 @@ macro_rules! impl_individuals {
                 /// returns: `Result<f64, OError>`
                 fn to_real_vec(&self, name: &str) -> Result<Vec<f64>, OError> {
                     self.iter().map(|i| i.get_real_value(name)).collect()
+                }
+
+
+                /// Get the maximum values for each objective. The maximum may be taken from
+                /// different individuals. The size of the vector equals the number of objectives.
+                /// This returns an error if the population has no individuals.
+                ///
+                /// returns: `Result<Vec<f64>, OError> `
+                fn get_max_objectives(&self) -> Result<Vec<f64>, OError> {
+                    let mut max_values = Vec::new();
+                    match self.len() {
+                        0 => {
+                            return Err(OError::Generic(
+                                "Cannot calculate the objective maximum values because the population is empty"
+                                    .to_string(),
+                            ))
+                        },
+                        _ => {
+                            for obj_name in self.get(0).unwrap().problem.objective_names() {
+                                let obj_max = vector_max(&self.objective_values(&obj_name)?)?;
+                                max_values.push(obj_max);
+                            }
+                            Ok(max_values)
+                        }
+                    }
+                }
+
+                /// Get the minimum values for each objective. The minimum may be taken from
+                /// different individuals. The size of the vector equals the number of objectives.
+                /// This returns an error if the population has no individuals.
+                ///
+                /// returns: `Result<Vec<f64>, OError> `
+                fn get_min_objectives(&self) -> Result<Vec<f64>, OError> {
+                    let mut min_values = Vec::new();
+                    match self.len() {
+                        0 => {
+                            return Err(OError::Generic(
+                                "Cannot calculate the objective minimum values because the population is empty"
+                                    .to_string(),
+                            ))
+                        }
+                        _ => {
+                            for obj_name in self.get(0).unwrap().problem.objective_names() {
+                                let obj_min = vector_min(&self.objective_values(&obj_name)?)?;
+                                min_values.push(obj_min);
+                            }
+                            Ok(min_values)
+                        }
+                    }
                 }
             }
         )*

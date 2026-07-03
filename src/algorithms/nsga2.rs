@@ -21,7 +21,7 @@ use crate::utils::{argsort, fast_non_dominated_sort, vector_max, vector_min, Sor
 use pyo3::prelude::*;
 
 /// The data key where the crowding distance is stored for each [`Individual`].
-const CROWDING_DIST_KEY: &str = "crowding_distance";
+pub const CROWDING_DIST_KEY: &str = "crowding_distance";
 
 /// Input arguments for the NSGA2 algorithm.
 #[as_algorithm_args]
@@ -161,7 +161,7 @@ impl NSGA2 {
             )?
         } else {
             info!("Created initial random population");
-            Population::init(problem.clone(), options.number_of_individuals)
+            Population::init(problem.clone(), options.number_of_individuals)?
         };
 
         let mutation_options = match options.mutation_operator_options {
