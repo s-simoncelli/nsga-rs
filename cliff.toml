@@ -87,9 +87,3 @@ recurse_submodules = false
 
 [bump]
 no_increment_regex = "chore|ci|docs|test"
-
-# Update Cargo.toml
-[[bumper.files]]
-path = "Cargo.toml"
-search = 'version = "{{ current_version }}"'
-replace = 'version = "{{ version }}"'
