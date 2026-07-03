@@ -7,7 +7,7 @@ use pyo3::prelude::*;
 /// Operator used to check a bounded constraint
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "python", derive(PartialEq))]
-#[cfg_attr(feature = "python", pyclass(eq, eq_int))]
+#[cfg_attr(feature = "python", pyclass(eq, eq_int, from_py_object))]
 pub enum RelationalOperator {
     /// Value must equal the constraint value
     EqualTo,
@@ -52,7 +52,7 @@ impl RelationalOperator {
 ///   assert_eq!(c.is_met(3.11), false);
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "python", pyclass(get_all))]
+#[cfg_attr(feature = "python", pyclass(get_all, from_py_object))]
 pub struct Constraint {
     /// The constraint name.
     name: String,

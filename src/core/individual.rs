@@ -69,7 +69,7 @@ pub struct Individual {
 // Workaround to set pyo3 get on struct field as it does not work with cfg_attr macro
 #[cfg(feature = "python")]
 #[derive(Debug, Clone)]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct Individual {
     /// The problem being solved
     problem: Arc<Problem>,

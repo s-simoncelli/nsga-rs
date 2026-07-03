@@ -269,7 +269,7 @@ impl Display for VariableType {
 
 /// The value of a variable to set on an individual.
 #[derive(Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "python", pyclass, derive(IntoPyObjectRef))]
+#[cfg_attr(feature = "python", pyclass(from_py_object), derive(IntoPyObjectRef))]
 #[serde(untagged)]
 pub enum VariableValue {
     /// The value for a floating-point number. This is a f64.
@@ -355,7 +355,7 @@ impl Debug for VariableValue {
 
 /// Python classes to handle Rust variables with generics.
 #[cfg(feature = "python")]
-#[pyclass(name = "VariableType", eq, eq_int)]
+#[pyclass(name = "VariableType", eq, eq_int, from_py_object)]
 #[derive(Clone, PartialEq)]
 pub enum PyVariableType {
     Real,

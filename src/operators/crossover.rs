@@ -38,7 +38,7 @@ pub trait Crossover {
 }
 
 /// Input arguments for [`SimulatedBinaryCrossover`].
-#[cfg_attr(feature = "python", pyclass(get_all))]
+#[cfg_attr(feature = "python", pyclass(get_all, from_py_object))]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SimulatedBinaryCrossoverArgs {
     /// The distribution index for crossover (this is the eta_c in the paper). This directly

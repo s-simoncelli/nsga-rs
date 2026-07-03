@@ -35,7 +35,7 @@ fn binomial_coefficient(mut n: u64, k: u64) -> u64 {
 
 /// Define the number of partitions for the two layers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(from_py_object))]
 pub struct TwoLayerPartitions {
     /// This is the number of partitions to use in the boundary layer.
     pub boundary_layer: usize,

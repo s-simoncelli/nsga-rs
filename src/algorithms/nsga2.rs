@@ -25,7 +25,7 @@ pub const CROWDING_DIST_KEY: &str = "crowding_distance";
 
 /// Input arguments for the NSGA2 algorithm.
 #[as_algorithm_args]
-#[cfg_attr(feature = "python", pyclass(get_all))]
+#[cfg_attr(feature = "python", pyclass(get_all, from_py_object))]
 pub struct NSGA2Arg {
     /// The number of individuals to use in the population. This must be a multiple of `2`.
     pub number_of_individuals: usize,
@@ -442,6 +442,10 @@ impl Algorithm<NSGA2Arg> for NSGA2 {
         Ok(())
     }
 }
+
+// Export data reader `NSGA2Data` for Python support
+#[cfg(feature = "python")]
+crate::algorithms::create_py_reader_interface!(NSGA2Data, NSGA2, NSGA2Arg);
 
 #[cfg(test)]
 mod test_sorting {

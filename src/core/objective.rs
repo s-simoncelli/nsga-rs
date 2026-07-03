@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 
 /// Whether the objective should be minimised or maximised. Default is minimise.
 #[derive(Default, Clone, Copy, Debug, PartialOrd, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "python", pyclass(eq, eq_int))]
+#[cfg_attr(feature = "python", pyclass(eq, eq_int, from_py_object))]
 pub enum ObjectiveDirection {
     #[default]
     /// Minimise an objective.
@@ -46,7 +46,7 @@ impl ObjectiveDirection {
 ///  println!("{}", o);
 /// ```
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "python", pyclass(get_all))]
+#[cfg_attr(feature = "python", pyclass(get_all, from_py_object))]
 pub struct Objective {
     /// The objective name.
     name: String,
