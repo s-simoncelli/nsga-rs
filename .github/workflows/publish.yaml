@@ -1,0 +1,78 @@
+# Bump version and publish when a new PR is merged
+name: Publish crate
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install git-cliff
+        run: cargo install git-cliff --locked
+
+      - name: Record current tag
+        id: before
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release with git-cliff
+        run: |
+          git cliff --bump --tag
+
+      - name: Record new tag
+        id: after
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Detect new release
+        id: release
+        run: |
+          if [ "${{ steps.before.outputs.tag }}" != "${{ steps.after.outputs.tag }}" ]; then
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Regenerate lockfile
+        run: cargo generate-lockfile
+
+      - name: Commit version bump and changelog
+        if: steps.release.outputs.created == 'true'
+        run: |
+          git add Cargo.toml Cargo.lock CHANGELOG.md
+          git commit -m "chore(release): ${{ steps.after.outputs.tag }}" || true
+          git push origin HEAD:main
+          git push origin --tags
+
+      - name: Publish crate
+        if: steps.release.outputs.created == 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        run: |
+          cargo publish --verbose --no-verify --package nsga_rs
