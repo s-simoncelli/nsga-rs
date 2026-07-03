@@ -78,7 +78,7 @@ jobs:
         run: |
           git add Cargo.toml Cargo.lock CHANGELOG.md
           git commit -m "chore(release): v${{ steps.bump.outputs.version }}"
-          git tag "v${{ steps.bump.outputs.version }}"
+          git tag "${{ steps.bump.outputs.version }}"
           git push origin HEAD:main
           git push origin "v${{ steps.bump.outputs.version }}"
 
