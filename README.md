@@ -1,7 +1,7 @@
 # NSGA RS
 
 [![Crates.io](https://img.shields.io/crates/v/nsga_rs.svg)](https://crates.io/crates/nsga_rs)
-[![Documentation](https://docs.rs/nsga_rs/badge.svg)](https://docs.rs/optirustic)
+[![Documentation](https://docs.rs/nsga_rs/badge.svg)](https://docs.rs/nsga_rs)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
 
 **NSGA RS** is a Rust framework for solving multi-objective optimisation problems using the

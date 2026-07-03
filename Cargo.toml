@@ -41,7 +41,8 @@ nsga-rs-macros = { path = "libs/nsga-rs-macros", version = "1.1.0" }
 hv-fonseca-et-al-2006-sys = { path = "libs/hv-fonseca-et-al-2006-sys", version = "2.0.2-rc.2" }
 nalgebra = "0.33.0"
 pyo3 = { version = ">=0.27.0", optional = true, features = [
-    "extension-module",
+    # "extension-module",
+    # "chrono",
 ] }
 pyo3-build-config = { version = ">=0.27.0", optional = true }
 gnuplot = { version = "0.0.46", optional = true }
@@ -51,9 +52,13 @@ float-cmp = "0.10.0"
 
 [features]
 default = ["plotting"]
-# Enable pyo3 support when creating a Python module that wraps this library with an optimisation problem
-python = ["pyo3", "pyo3-build-config"]
 plotting = ["gnuplot"]
+python = ["dep:pyo3", "dep:pyo3-build-config", "pyo3/chrono"]
+# Enable pyo3 support when creating a Python module that wraps this library with an 
+# optimisation problem
+python-module = ["python", "pyo3/extension-module"]
+# feature used only to test python function
+python-test = ["python", "pyo3/auto-initialize"]
 
 [package.metadata.docs.rs]
 all-features = true

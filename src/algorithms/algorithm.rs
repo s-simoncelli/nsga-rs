@@ -475,7 +475,7 @@ impl Display for AlgorithmExport {
 /// an algorithm to save objectives, constraints and solutions to a file each time the generation
 /// counter in [`Algorithm::generation`] increases by a certain step provided in `generation_step`.
 /// Exporting history may be useful to track convergence and inspect an algorithm evolution.
-#[cfg_attr(feature = "python", pyclass(get_all))]
+#[cfg_attr(feature = "python", pyclass(get_all, from_py_object))]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ExportHistory {
     /// Export the algorithm data each time the generation counter in [`Algorithm::generation`]
@@ -1041,7 +1041,7 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
 /// algo = Algorithm.nsga2(args)
 /// ```
 #[cfg(feature = "python")]
-#[pyclass(name = "Algorithm")]
+#[pyclass(from_py_object, name = "Algorithm")]
 #[derive(Clone)]
 #[allow(non_camel_case_types)]
 pub enum PyAlgorithm {
@@ -1072,6 +1072,155 @@ impl PyAlgorithm {
         self.__repr__().unwrap()
     }
 }
+
+// Macro to generate python class for an algorithm data reader
+#[cfg(feature = "python")]
+macro_rules! create_py_reader_interface {
+    ($name: ident, $type: ident, $ArgType: ident) => {
+        #[pyclass]
+        pub struct $name {
+            export_data: crate::algorithms::AlgorithmExport,
+            #[pyo3(get)]
+            problem: crate::core::PyProblem,
+            #[pyo3(get)]
+            individuals: Vec<Individual>,
+            #[pyo3(get)]
+            took: Py<PyAny>,
+            #[pyo3(get)]
+            objectives: std::collections::HashMap<String, Vec<f64>>,
+            #[pyo3(get)]
+            additional_data: Option<std::collections::HashMap<String, DataValue>>,
+            #[pyo3(get)]
+            exported_on: chrono::DateTime<chrono::Utc>,
+        }
+
+        #[pymethods]
+        impl $name {
+            #[new]
+            /// Initialise the class
+            pub fn new(file: PathBuf) -> PyResult<Self> {
+                let path = PathBuf::from(file);
+                let file_data: crate::algorithms::AlgorithmSerialisedExport<$ArgType> =
+                    $type::read_json_file(&path)
+                        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+                // Algorthm data
+                let additional_data = file_data.additional_data.clone();
+                let exported_on = file_data.exported_on.clone();
+
+                // Convert export
+                let export_data: crate::algorithms::AlgorithmExport = file_data
+                    .try_into()
+                    .map_err(|e: OError| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+                // Problem
+                let problem: crate::core::PyProblem = export_data.problem.as_ref().into();
+
+                // Time taken
+                let took = Python::attach(|py| -> PyResult<Py<PyAny>> {
+                    let module = PyModule::import(py, "datetime")?;
+
+                    let timedelta = module.getattr("timedelta")?;
+                    let kwargs = pyo3::types::IntoPyDict::into_py_dict(
+                        &[
+                            ("hours", export_data.took.hours),
+                            ("minutes", export_data.took.minutes),
+                            ("seconds", export_data.took.seconds),
+                        ],
+                        py,
+                    )?;
+                    let result = timedelta.call((), Some(&kwargs))?;
+                    Ok(result.extract::<Py<PyAny>>()?)
+                })?;
+
+                // Individuals
+                let individuals = export_data.individuals.clone();
+
+                // All objective values by name
+                let objectives = export_data
+                    .get_objectives()
+                    .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+                Ok(Self {
+                    export_data,
+                    problem,
+                    took,
+                    individuals,
+                    objectives,
+                    additional_data,
+                    exported_on,
+                })
+            }
+
+            #[getter]
+            /// Get the generation number.
+            pub fn generation(&self) -> u32 {
+                self.export_data.generation
+            }
+
+            #[getter]
+            /// Get the algorithm name.
+            pub fn algorithm(&self) -> String {
+                self.export_data.algorithm.clone()
+            }
+
+            /// Calculate the hyper-volume metric.
+            pub fn hyper_volume(&mut self, reference_point: Vec<f64>) -> PyResult<f64> {
+                let hv = crate::metrics::HyperVolume::from_individual(
+                    &mut self.export_data.individuals,
+                    &reference_point,
+                )
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+                Ok(hv)
+            }
+
+            /// Estimate the reference point from serialised data.
+            #[pyo3(signature = (offset=None))]
+            pub fn estimate_reference_point(&self, offset: Option<Vec<f64>>) -> PyResult<Vec<f64>> {
+                let individuals = &self.export_data.individuals;
+                let ref_point =
+                    crate::metrics::HyperVolume::estimate_reference_point(individuals, offset)
+                        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+                Ok(ref_point)
+            }
+
+            /// Estimate the reference point from files.
+            #[staticmethod]
+            #[pyo3(signature = (folder, offset=None))]
+            pub fn estimate_reference_point_from_files(
+                folder: PathBuf,
+                offset: Option<Vec<f64>>,
+            ) -> PyResult<Vec<f64>> {
+                let all_serialise_data_vec = $type::read_json_files(&folder)
+                    .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+                let ref_point = crate::metrics::HyperVolume::estimate_reference_point_from_files(
+                    &all_serialise_data_vec,
+                    offset,
+                )
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+                Ok(ref_point)
+            }
+
+            #[staticmethod]
+            pub fn convergence_data(
+                folder: String,
+                reference_point: Vec<f64>,
+            ) -> PyResult<(Vec<u32>, Vec<chrono::DateTime<chrono::Utc>>, Vec<f64>)> {
+                let folder = PathBuf::from(folder);
+                let all_serialise_data = $type::read_json_files(&folder)
+                    .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+                let data =
+                    crate::metrics::HyperVolume::from_files(&all_serialise_data, &reference_point)
+                        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+                Ok((data.generations(), data.times(), data.values()))
+            }
+        }
+    };
+}
+// // Export macro to parent module
+#[cfg(feature = "python")]
+pub(crate) use create_py_reader_interface;
 
 #[cfg(test)]
 mod test {
@@ -1196,5 +1345,140 @@ mod test {
 
         assert_eq!(results.number_of_function_evaluations, 20);
         assert_eq!(results.generation, 2);
+    }
+}
+
+#[cfg(feature = "python")]
+#[cfg(test)]
+mod test_python_api {
+    use std::env;
+    use std::error::Error;
+    use std::path::Path;
+
+    use crate::algorithms::NSGA3Data;
+    use crate::utils::{DasDarren1998, NumberOfPartitions, TwoLayerPartitions};
+    use float_cmp::assert_approx_eq;
+    use pyo3::prelude::*;
+    use pyo3::types::PyList;
+
+    #[test]
+    /// test the NSGA*Data class.
+    fn test_reader() -> Result<(), Box<dyn Error>> {
+        Python::attach(|py| -> Result<(), Box<dyn Error>> {
+            let file = Path::new(&env::current_dir()?)
+                .join("examples")
+                .join("results")
+                .join("DTLZ1_3obj_NSGA3_gen400.json");
+            let reader = Py::new(py, NSGA3Data::new(file)?)?;
+
+            // check problem
+            let problem = reader.getattr(py, "problem")?;
+            assert_eq!(
+                problem
+                    .getattr(py, "number_of_variables")?
+                    .extract::<i32>(py)?,
+                7
+            );
+            assert_eq!(
+                problem
+                    .getattr(py, "variables")?
+                    .call_method1(py, "get", ("x1".to_string(),))?
+                    .getattr(py, "min_value")?
+                    .extract::<f64>(py)?,
+                0.0
+            );
+            assert_eq!(
+                problem
+                    .getattr(py, "objectives")?
+                    .call_method0(py, "__len__")?
+                    .extract::<i32>(py)?,
+                3
+            );
+
+            // check reader props
+            assert_eq!(
+                reader.getattr(py, "algorithm")?.extract::<String>(py)?,
+                "NSGA3".to_string()
+            );
+            assert_eq!(reader.getattr(py, "generation")?.extract::<i32>(py)?, 400);
+            assert_eq!(
+                reader
+                    .getattr(py, "exported_on")?
+                    .getattr(py, "day")?
+                    .extract::<u32>(py)?,
+                10
+            );
+
+            // test individuals
+            let ind = reader
+                .getattr(py, "individuals")?
+                .call_method1(py, "pop", (0,))?;
+            assert_eq!(
+                ind.call_method0(py, "constraint_violation")?
+                    .extract::<f32>(py)?,
+                0.0
+            );
+            assert_approx_eq!(
+                f32,
+                ind.call_method1(py, "get_objective_value", ("f2",))?
+                    .extract::<f32>(py)?,
+                0.167,
+                epsilon = 0.001
+            );
+            assert!(ind
+                .call_method0(py, "variables")?
+                .call_method0(py, "keys")?
+                .call_method1(py, "__contains__", ("x5".to_string(),))?
+                .extract::<bool>(py)?);
+            assert!(ind
+                .call_method0(py, "data")?
+                .call_method0(py, "keys")?
+                .call_method1(py, "__contains__", ("reference_point_index".to_string(),))?
+                .extract::<bool>(py)?);
+            assert_approx_eq!(
+                f32,
+                reader
+                    .call_method1(py, "hyper_volume", (PyList::new(py, [100, 100, 100])?,),)?
+                    .extract::<f32>(py)?,
+                999999.97,
+                epsilon = 0.001
+            );
+            Ok(())
+        })
+    }
+
+    #[test]
+    /// Test the DasDarren1998 class
+    fn test_hypervolume() -> Result<(), Box<dyn Error>> {
+        Python::attach(|py| -> Result<(), Box<dyn Error>> {
+            let hv = Py::new(py, DasDarren1998::new(3, &NumberOfPartitions::OneLayer(5))?)?;
+            assert_eq!(
+                hv.call_method0(py, "calculate")?
+                    .call_method0(py, "__len__")?
+                    .extract::<u32>(py)?,
+                21
+            );
+
+            // assert len(ds.calculate()) == 25
+            let hv = Py::new(
+                py,
+                DasDarren1998::new(
+                    3,
+                    &&NumberOfPartitions::TwoLayers(TwoLayerPartitions {
+                        boundary_layer: 3,
+                        inner_layer: 4,
+                        scaling: None,
+                    }),
+                )?,
+            )?;
+            assert_eq!(
+                hv.call_method0(py, "calculate")?
+                    .call_method0(py, "__len__")?
+                    .extract::<u32>(py)?,
+                25
+            );
+
+            Ok(())
+        })
     }
 }

@@ -24,7 +24,7 @@ pub trait Mutation {
 }
 
 /// Input arguments for [`PolynomialMutation`].
-#[cfg_attr(feature = "python", pyclass(get_all))]
+#[cfg_attr(feature = "python", pyclass(get_all, from_py_object))]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PolynomialMutationArgs {
     /// A user-defined parameter to control the mutation. This is eta_m in the paper, and it is
