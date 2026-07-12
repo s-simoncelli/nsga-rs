@@ -1282,8 +1282,7 @@ pub mod py {
             } else if let Ok(x) = obj.extract::<String>() {
                 if x == "Max" {
                     Ok(NumThreads::Max)
-                } else if {
-                if x == "Off" {
+                } else if x == "Off" {
                     Ok(NumThreads::Off)
                 } else {
                     Err(PyTypeError::new_err("Invalid string".to_string()))
