@@ -23,10 +23,8 @@ postprocessors = [
     # Replace the placeholder <REPO> with a URL.
     #{ pattern = '<REPO>', replace = "https://github.com/orhun/git-cliff" },
 ]
-# render body even when there are no releases to process
-# render_always = true
 # output file path
-# output = "test.md"
+output = "CHANGELOG.md"
 
 [git]
 # Parse commits according to the conventional commits specification.
@@ -89,9 +87,3 @@ recurse_submodules = false
 
 [bump]
 no_increment_regex = "chore|ci|docs|test"
-
-# Update Cargo.toml
-[[bumper.files]]
-path = "Cargo.toml"
-search = 'version = "{{ current_version }}"'
-replace = 'version = "{{ version }}"'

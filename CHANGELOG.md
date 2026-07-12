@@ -1,124 +1,101 @@
-# Changelog
+## [1.3.0] - 2026-07-03
 
-## 1.2.1
+### 🚀 Features
 
-- Bumped optirustic-macro package version to publish new version on crates.io
+- Moved plotting functionalities to rust with gnuplot
+- Added get_min_objectives and get_max_objectives methods to Population and Individuals structs
+- Added create_py_reader_interface macro to export Python reader and added tests
 
-## 1.2.0
+### 🐛 Bug Fixes
 
-- Added `python` feature to enable Python API. This allows any user to build
-  a Rust-based Python library wrapper this genetic algorithm library and an optimisation
-  problem to solve.
-- The `optirustic` Python package on Pypi now offers more API to initialise the `StoppingCondition`,
-  `PolynomialMutationArgs`,
-  `SimulatedBinaryCrossoverArgs`, `ExportHistory`, `NSGA2Arg`, `NSGA3Arg` and `Algorithm` classes.
+- Return Population after initialisation in new init method
 
-## 1.1.3
+### 🧪 Testing
 
-- Fixed SBX test with integer values by changing the seed number after rnf update. The old seed truncates the integers
-- Ensure that with integer values the crossover and mutation operators do not exceed the var upper bound. This might
-  have happened when the variable is selected close to its upper bound.
+- Fixed python test as new JSON files are generated after algorithms run
+- Reset repo after rust tests
+- Moved python test to separate job
+- Fixed python test when checking for exported_on
 
-## 1.1.2
+### ⚙️ Miscellaneous Tasks
 
-- Bumped dependency versions
-- Added `generation_step` and`destinatiion` methods in `Algorithm` trait to
-  get the current generation and the path where results are stored.
+- Tagged repo with correct version
+- Fix PYI file formatting
+- Renamed project to nsga_rs
+- Removed python project as this can be bundle using a custom pyo3 project with this lib
+- Updated README with new name and made minor improvements to its structure
+- Added documentation to Hypervolume::plot_from_files
+- Fixed rust CI and disabled Python pipeline
+- Required pyo3 0.27.0
+- Bumped version to 1.2.3
+- Always run tests with --all-features flag
+- Install gnuplot on github CI
+- Use sudo in CI to install gnuplot
+- Do not hard-code rank and crowding distance keys in BinaryComparisonOperator
+- Use from_py_object with pyclass
+- Enable all features in VSCode rust analyser
+- Added git-cliff to bump version and generate changelog file
+- Added new publish CI to bump version, generate changelog and publish crate
+- Fixed publish CI to calculate tag on bump
+- Tag repo in publish CI
+## [1.2.2] - 2025-03-22
 
-## 1.1.0
+### 🚀 Features
 
-- Added `number_of_function_evaluations` field in algorithms and serialised data. This fields
-  calculate the number of times individual's objectives and constraints are evaluated during an
-  evolution.
-- Renamed struct to specify stopping condition values. For example,
-  the `StoppingConditionType::MaxGeneration(MaxGeneration(250))`
-  can be defined as `StoppingConditionType::MaxGeneration(MaxGenerationValue(250))`. This is done to avoid confusion
-  between the enum `StoppingConditionType` value and the value of the stopping condition.
-- Added the following new stopping conditions: `MaxFunctionEvaluations`, `Any` and `All`. The first one stops the
-  evolution
-  after a maximum number of functon evaluations. The second and third allows to combine multiple condition. For example,
-  they allow to stop the algorithm when either a specific duration or evolution number are reached (using `Any`).
+- Added StoppingCondition::MaxDurationAsMinutes StoppingCondition::MaxDurationAsHours to stop the algorithm after a specified number of minutes or hours
 
-## 1.0.0
+### ⚙️ Miscellaneous Tasks
 
-- Added new Python API to generate reference points with `DasDarren1998`. The new class
-  allows getting the weights for the `NSGA3` algorithm and plotting them. See the Python
-  type hints for name and description of the new class methods.
-- Added `AdaptiveNSGA3` to use the adaptive approach to handle the reference points. This
-  implements the new algorithm from Jain and Deb (2014) (doi.org/10.1109/TEVC.2013.2281534)
-  to handle problems where not all reference points intersect the optimal Pareto front. This
-  helps to reduce crowding and enhance the solution quality. See the
-  new [example file](./examples/nsga3_inverted_dtlz1.rs)
-  and [results](./examples/results/DTLZ1_3obj_Adaptive_NSGA3_gen400_obj_vs_ref_points.png).
-- The algorithm additional data are now exported in `AlgorithExport` in the `Export additional_data in AlgorithmExport`
-  field. This contains, for example, the reference points for `NSGA3`.
+- Updated changelog for version 1.2.1
+## [1.2.0] - 2025-03-16
 
-## 0.6.0
+### ⚙️ Miscellaneous Tasks
 
-- Removed crate `hv-wfg-sys`. The hyper-volume from `HyperVolumeWhile2012` is now calculated
-  using the Rust implementation of the While et al. (2012) approach from the paper. No public
-  API has been changed.
-- Replaced `GPL` license with `MIT` license.
+- Updated changelog file to include changes up to version 1.2.0
+## [1.2.1] - 2025-03-16
 
-## 0.5.0
+### 🚀 Features
 
-- Remove `plot` feature and `plotters` as dependency. Charts can now be generated via
-  the Python package `optirustic`
-- Added python API for NSGA3 to plot reference points from the algorithm's data
-- Added python function `plot_reference_points` to plot reference points from a vector
-- Updated reference point examples to use new serialise function
-- Added Python scripts to plot serialised reference points
-- Added new charts in example folder generated from serialised data
+- Added "python" feature to enable Python API. Added new API in Python package
 
-## 0.4.1
+### 🐛 Bug Fixes
 
-- Added `Hypervolume::estimate_reference_point_from_file` and
-  `Hypervolume::estimate_reference_point_from_files` methods, to easily
-  estimate the reference point from a file or set of files.
-- Python package API now includes the following new methods: `convergence_data`
-  (to fetch the convergence data instead of plotting it), `estimate_reference_point_from_file`
-  and `estimate_reference_point_from_files`.
+- Fixed NSGA3 example with new Rust API
+- Fixed dev dependencies installation in pyproject.toml file
+- Fixed package path in Python pipeline
 
-## 0.4.0
+### ⚙️ Miscellaneous Tasks
 
-- Made `Elapsed` fields public.
-- Added `Constraint::target()` and `Constraint::operator()` to access the
-  struct target and operator data respectively.
-- Added `Variable::label` to get a label describing the type of variable set
-  on a problem.
-- Added `Individual::constraints()` and `Individual::objectives()` to access
-  an individual's constraint and objective values grouped by their name.
-- Added `Individual::data()` to access any custom data set on an individual
-  (such as the rank, crowding distance or reference point distance).
-- Added new `optirustic-py` crate to load serialised data from Python and
-  plot Pareto front and convergence charts.
+- Run Rust test with default features
+- Fixed Python pipeline to run ruff
+- Use optirustic-py path in Python CI
+- Bumped optirustic-macro version
+- Made pyo3-build-config dependency optional
+- Use new macro dep version from crate.io
+## [1.1.3] - 2025-02-26
 
-## 0.3.4
+### 🐛 Bug Fixes
 
-- Added `AlgorithmSerialisedExport::problem()` and `AlgorithmSerialisedExport::individuals()` to
-  get the `Problem` and vector of `Individual` from serialised data.
-- Implemented trait to convert from `AlgorithmSerialisedExport` to `AlgorithmExport`.
+- Fixed SBX test with integer values by changing the seed number after rnf update. The old seed truncates the integers.
+- Ensure that with integer values the crossover and mutation operators do not exceed the var upper bound. This might have happened when the variable is selected close to its upper bound.
 
-## 0.3.3
+### ⚙️ Miscellaneous Tasks
 
-- Added `exported_on` field in `AlgorithmSerialisedExport`. This field
-  contains the string with the date and time when the serialised data was exported
-- Added `OError::File` to handle error messages related to files (for example when
-  data is serialised or deserialised).
-- Implemented `TryInto` trait to convert `ProblemExport` (from serialised data)
-  to `Problem`.
-- When serialised data are imported in `Algorithm::read_json_file`, the sign of
-  objective values that are maximised is inverted. Maximised objectives are stored as
-  negative values in the `Objective` struct and the sign is inverted back for the
-  user in `Algorithm::save_to_json` when data is serialised.
-- Fixed history export at desired generation step. The file was exported after 1
-  or 2 generations instead.
-- Added `Hypervolume` struct to calculate metric from serialised data and examples.
-  The hyper-volume can now be calculated from the following sources:
-    - an array of `Individual` using `HyperVolume::from_individual`
-    - an array of objectives given as `f64` using `HyperVolume::from_values`
-    - a JSON file using `HyperVolume::from_file`
-    - a folder with JSON files using `HyperVolume::from_files`
-- The `NSGA2` algorithm now uses `f64::MAX` instead of `f64::INFINITE` to handle
-  points without a crowding distance. Infinite is not supported by serde and was
-  converted to `null`.
+- Use new clang in ubuntu workflow
+## [1.1.2] - 2025-02-26
+
+### 🚀 Features
+
+- Added destination and generation_step methods in ExportHistory struct
+
+### 🐛 Bug Fixes
+
+- Import IndexedRandom in rand prelude
+
+### ⚙️ Miscellaneous Tasks
+
+- Updated dependencies in Cargo file
+- Use new rand crate API
+- Bumped crate version and updated optirustic-py pyo3
+- Rever back to pyo3 0.22.2 due to API braking changes
+## [0.3.3] - 2024-08-12

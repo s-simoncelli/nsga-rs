@@ -34,41 +34,53 @@ jobs:
       - name: Install git-cliff
         run: cargo install git-cliff --locked
 
-      - name: Record current tag
-        id: before
+      - name: Get latest tag
+        id: latest
         run: |
-          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
+          echo "tag=${TAG#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Generate release with git-cliff
+      - name: Compute bumped version
+        id: bump
         run: |
-          git cliff --bump --tag
+          VERSION=$(git cliff --bumped-version)
+          echo "version=${VERSION#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Record new tag
-        id: after
-        run: |
-          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Detect new release
+      - name: Determine whether to release
         id: release
         run: |
-          if [ "${{ steps.before.outputs.tag }}" != "${{ steps.after.outputs.tag }}" ]; then
-            echo "created=true" >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.latest.outputs.tag }}" != "${{ steps.bump.outputs.version }}" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
           else
-            echo "created=false" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Regenerate lockfile
+      - name: Install cargo-edit
+        if: steps.release.outputs.publish == 'true'
+        run: cargo install cargo-edit --locked
+
+      - name: Update Cargo.toml
+        if: steps.release.outputs.publish == 'true'
+        run: cargo set-version "${{ steps.bump.outputs.version }}"
+
+      - name: Regenerate Cargo.lock
+        if: steps.release.outputs.publish == 'true'
         run: cargo generate-lockfile
 
-      - name: Commit version bump and changelog
-        if: steps.release.outputs.created == 'true'
+      - name: Generate CHANGELOG
+        if: steps.release.outputs.publish == 'true'
+        run: |
+          git cliff \
+            --tag "${{ steps.bump.outputs.version }}"
+
+      - name: Commit and tag
+        if: steps.release.outputs.publish == 'true'
         run: |
           git add Cargo.toml Cargo.lock CHANGELOG.md
-          git commit -m "chore(release): ${{ steps.after.outputs.tag }}" || true
+          git commit -m "chore(release): v${{ steps.bump.outputs.version }}"
+          git tag "${{ steps.bump.outputs.version }}"
           git push origin HEAD:main
-          git push origin --tags
+          git push origin "v${{ steps.bump.outputs.version }}"
 
       - name: Publish crate
         if: steps.release.outputs.created == 'true'
