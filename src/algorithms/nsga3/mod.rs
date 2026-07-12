@@ -1,5 +1,6 @@
 use log::{debug, info, warn};
 use rand::RngCore;
+use rayon::ThreadPool;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Rem;
@@ -326,7 +327,7 @@ impl NSGA3 {
             nfe: 0,
             stopping_condition: options.stopping_condition,
             start_time: Instant::now(),
-            threads: options.threads,
+            thread_pool: Self::build_thread_pool(options.threads)?,
             export_history: options.export_history,
             rng: get_rng(options.seed),
             args: nsga3_args,
@@ -398,7 +399,7 @@ impl Algorithm<NSGA3Arg> for NSGA3 {
         NSGA3::do_evaluation(
             self.population.individuals_as_mut(),
             &mut self.nfe,
-            &self.threads,
+            &self.thread_pool,
         )?;
 
         info!("Initial evaluation completed");
@@ -444,7 +445,7 @@ impl Algorithm<NSGA3Arg> for NSGA3 {
         NSGA3::do_evaluation(
             self.population.individuals_as_mut(),
             &mut self.nfe,
-            &self.threads,
+            &self.thread_pool,
         )?;
         debug!("Evaluation done");
 

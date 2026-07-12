@@ -8,7 +8,7 @@ use std::{fmt, fs};
 
 use chrono::{DateTime, Utc};
 use log::{debug, info};
-use rayon::prelude::*;
+use rayon::{prelude::*, ThreadPool};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -41,26 +41,6 @@ pub enum NumThreads {
 impl Default for NumThreads {
     fn default() -> Self {
         NumThreads::Max
-    }
-}
-
-impl NumThreads {
-    pub fn get_threads(&self) -> Result<Option<usize>, OError> {
-        let max_threads = rayon::max_num_threads();
-        match &self {
-            NumThreads::Max => Ok(Some(max_threads)),
-            NumThreads::Use(number) => {
-                if *number > max_threads {
-                    return Err(OError::Generic(format!(
-                        "The number of threads ({}) must be less than the maximum available ({})",
-                        number, max_threads
-                    )));
-                } else {
-                    Ok(Some(*number))
-                }
-            }
-            NumThreads::Off => Ok(None),
-        }
     }
 }
 
@@ -657,6 +637,26 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
         )
     }
 
+    /// Get the ThreadPool instance.
+    ///
+    /// return: `&ThreadPool`.
+    fn build_thread_pool(num_threads: NumThreads) -> Result<Option<ThreadPool>, OError> {
+        let pool = match num_threads {
+            NumThreads::Max | NumThreads::Use(_) => {
+                let mut builder = rayon::ThreadPoolBuilder::new();
+                if let NumThreads::Use(n) = num_threads {
+                    builder = builder.num_threads(n);
+                }
+                let pool = builder.build().map_err(|e| {
+                    OError::Generic(format!("cannot initialise the thread pool because {e}"))
+                })?;
+                Some(pool)
+            }
+            NumThreads::Off => None,
+        };
+        Ok(pool)
+    }
+
     /// Evaluate the objectives and constraints for unevaluated individuals in the population. This
     /// updates the individual data only, runs the evaluation function in a plain loop and increase
     /// the `nfe` counter by the number of evaluated individuals.
@@ -668,21 +668,17 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     ///
     /// * `individuals`: The individuals to evaluate.
     /// * `nfe`: The reference to the number of function evaluation counter.
+    /// * `thread_pool`: The `ThreadPool`.
     ///
     /// return `Result<usize, OError>`.
     fn do_evaluation(
         individuals: &mut [Individual],
         nfe: &mut u32,
-        threads: &NumThreads,
+        thread_pool: &Option<ThreadPool>,
     ) -> Result<(), OError> {
         let delta_nfe = Self::count_unevaluated(individuals);
-        match threads.get_threads()? {
-            Some(num_threads) => {
-                let pool = rayon::ThreadPoolBuilder::new()
-                    .num_threads(num_threads)
-                    .build()
-                    .unwrap();
-
+        match thread_pool {
+            Some(pool) => {
                 pool.install(|| {
                     individuals
                         .into_par_iter()

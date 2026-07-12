@@ -93,7 +93,7 @@ pub fn as_algorithm_args(_attrs: TokenStream, input: TokenStream) -> TokenStream
 
 /// This macro adds the following private fields to the struct defining an algorithm:
 /// `problem`, `number_of_individuals`, `population`, `generation`,`stopping_condition`,
-/// `number_of_function_evaluations`, `start_time`, `export_history` and `parallel`.
+/// `number_of_function_evaluations`, `start_time`, `export_history` and `threads`.
 ///
 /// It also implements the `Display` trait.
 ///
@@ -184,10 +184,10 @@ pub fn as_algorithm(attrs: TokenStream, input: TokenStream) -> TokenStream {
                 fields.named.push(
                     syn::Field::parse_named
                         .parse2(quote! {
-                            /// Whether the evaluation should run using threads
-                            threads: NumThreads
+                            /// The thread pool.
+                            thread_pool: Option<ThreadPool>
                         })
-                        .expect("Cannot add `threads` field"),
+                        .expect("Cannot add `thread_pool` field"),
                 );
             }
 
@@ -213,7 +213,8 @@ pub fn as_algorithm(attrs: TokenStream, input: TokenStream) -> TokenStream {
 /// This macro adds common items when the `Algorithm` trait is implemented for a new algorithm
 /// struct. This adds the following items: `Algorithm::name()`, `Algorithm::stopping_condition()`
 /// `Algorithm::start_time()`, `Algorithm::problem()`,  `Algorithm::population()`,
-/// `Algorithm::generation()`, `Algorithm::number_of_function_evaluations()` and `Algorithm::export_history()`.
+/// `Algorithm::generation()`, `Algorithm::number_of_function_evaluations()`,
+/// `Algorithm::build_thread_pool()` and `Algorithm::export_history()`.
 ///
 #[proc_macro_attribute]
 pub fn impl_algorithm_trait_items(attrs: TokenStream, input: TokenStream) -> TokenStream {

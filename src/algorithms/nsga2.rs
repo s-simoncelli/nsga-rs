@@ -5,6 +5,7 @@ use std::ops::Rem;
 use std::path::PathBuf;
 
 use nsga_rs_macros::{as_algorithm, as_algorithm_args, impl_algorithm_trait_items};
+use rayon::ThreadPool;
 
 use crate::algorithms::{Algorithm, NumThreads};
 use crate::core::utils::get_rng;
@@ -81,8 +82,8 @@ impl NSGA2Arg {
 
     pub fn __repr__(&self) -> PyResult<String> {
         Ok(format!(
-            "NSGA2Arg(number_of_individuals={}, stopping_condition={})",
-            self.number_of_individuals, self.stopping_condition
+            "NSGA2Arg(number_of_individuals={}, stopping_condition={}",
+            self.number_of_individuals, self.stopping_condition,
         ))
     }
 
@@ -189,7 +190,7 @@ impl NSGA2 {
             nfe: 0,
             stopping_condition: options.stopping_condition,
             start_time: Instant::now(),
-            threads: options.threads,
+            thread_pool: Self::build_thread_pool(options.threads)?,
             export_history: options.export_history,
             rng: get_rng(options.seed),
             args: nsga2_args,
@@ -328,7 +329,7 @@ impl Algorithm<NSGA2Arg> for NSGA2 {
         NSGA2::do_evaluation(
             self.population.individuals_as_mut(),
             &mut self.nfe,
-            &self.threads,
+            &self.thread_pool,
         )?;
 
         debug!("Calculating rank");
@@ -378,7 +379,7 @@ impl Algorithm<NSGA2Arg> for NSGA2 {
         NSGA2::do_evaluation(
             self.population.individuals_as_mut(),
             &mut self.nfe,
-            &self.threads,
+            &self.thread_pool,
         )?;
         debug!("Evaluation done");
 
