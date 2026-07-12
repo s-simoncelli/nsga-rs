@@ -1,13 +1,12 @@
+use log::{debug, info};
+use rand::RngCore;
 use std::fmt::{Display, Formatter};
 use std::ops::Rem;
 use std::path::PathBuf;
 
-use log::{debug, info};
-use rand::RngCore;
-
 use nsga_rs_macros::{as_algorithm, as_algorithm_args, impl_algorithm_trait_items};
 
-use crate::algorithms::Algorithm;
+use crate::algorithms::{Algorithm, NumThreads};
 use crate::core::utils::get_rng;
 use crate::core::{DataValue, Individual, Individuals, IndividualsMut, OError};
 use crate::operators::{
@@ -56,17 +55,18 @@ pub struct NSGA2Arg {
 #[pymethods]
 impl NSGA2Arg {
     #[new]
-    #[pyo3(signature = (number_of_individuals, stopping_condition, crossover_operator_options=None, mutation_operator_options=None, resume_from_file=None, parallel=None, export_history=None, seed=None))]
+    #[pyo3(signature = (number_of_individuals, stopping_condition, crossover_operator_options=None, mutation_operator_options=None, resume_from_file=None, threads=None, export_history=None, seed=None))]
     fn py_new(
         number_of_individuals: usize,
         stopping_condition: StoppingCondition,
         crossover_operator_options: Option<SimulatedBinaryCrossoverArgs>,
         mutation_operator_options: Option<PolynomialMutationArgs>,
         resume_from_file: Option<PathBuf>,
-        parallel: Option<bool>,
+        threads: Option<NumThreads>,
         export_history: Option<ExportHistory>,
         seed: Option<u64>,
     ) -> PyResult<Self> {
+        let threads = threads.unwrap_or_default();
         Ok(NSGA2Arg {
             number_of_individuals,
             crossover_operator_options,
@@ -74,7 +74,7 @@ impl NSGA2Arg {
             resume_from_file,
             seed,
             stopping_condition,
-            parallel,
+            threads,
             export_history,
         })
     }
@@ -189,7 +189,7 @@ impl NSGA2 {
             nfe: 0,
             stopping_condition: options.stopping_condition,
             start_time: Instant::now(),
-            parallel: options.parallel.unwrap_or(true),
+            threads: options.threads,
             export_history: options.export_history,
             rng: get_rng(options.seed),
             args: nsga2_args,
@@ -324,11 +324,12 @@ impl Algorithm<NSGA2Arg> for NSGA2 {
     /// return: `Result<(), OError>`
     fn initialise(&mut self) -> Result<(), OError> {
         info!("Evaluating initial population");
-        if self.parallel {
-            NSGA2::do_parallel_evaluation(self.population.individuals_as_mut(), &mut self.nfe)?;
-        } else {
-            NSGA2::do_evaluation(self.population.individuals_as_mut(), &mut self.nfe)?;
-        }
+
+        NSGA2::do_evaluation(
+            self.population.individuals_as_mut(),
+            &mut self.nfe,
+            &self.threads,
+        )?;
 
         debug!("Calculating rank");
         fast_non_dominated_sort(self.population.individuals_as_mut(), false)?;
@@ -374,11 +375,11 @@ impl Algorithm<NSGA2Arg> for NSGA2 {
         debug!("New population size is {}", self.population.len());
 
         debug!("Evaluating population");
-        if self.parallel {
-            NSGA2::do_parallel_evaluation(self.population.individuals_as_mut(), &mut self.nfe)?;
-        } else {
-            NSGA2::do_evaluation(self.population.individuals_as_mut(), &mut self.nfe)?;
-        }
+        NSGA2::do_evaluation(
+            self.population.individuals_as_mut(),
+            &mut self.nfe,
+            &self.threads,
+        )?;
         debug!("Evaluation done");
 
         debug!("Calculating fronts and ranks for new population");
@@ -694,7 +695,7 @@ mod test_sorting {
 mod test_problems {
     use nsga_rs_macros::test_with_retries;
 
-    use crate::algorithms::{Algorithm, NSGA2Arg, StoppingCondition, NSGA2};
+    use crate::algorithms::{Algorithm, NSGA2Arg, NumThreads, StoppingCondition, NSGA2};
     use crate::core::builtin_problems::{
         SCHProblem, ZTD1Problem, ZTD2Problem, ZTD3Problem, ZTD4Problem,
     };
@@ -712,7 +713,7 @@ mod test_problems {
             stopping_condition: StoppingCondition::MaxGeneration(1000),
             crossover_operator_options: None,
             mutation_operator_options: None,
-            parallel: Some(false),
+            threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
             seed: Some(10),
@@ -740,7 +741,7 @@ mod test_problems {
             stopping_condition: StoppingCondition::MaxGeneration(2500),
             crossover_operator_options: None,
             mutation_operator_options: None,
-            parallel: Some(false),
+            threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
             seed: Some(1),
@@ -787,7 +788,7 @@ mod test_problems {
             stopping_condition: StoppingCondition::MaxGeneration(2500),
             crossover_operator_options: None,
             mutation_operator_options: None,
-            parallel: Some(false),
+            threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
             seed: Some(1),
@@ -839,7 +840,7 @@ mod test_problems {
             stopping_condition: StoppingCondition::MaxGeneration(2500),
             crossover_operator_options: None,
             mutation_operator_options: None,
-            parallel: Some(false),
+            threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
             seed: Some(1),
@@ -890,7 +891,7 @@ mod test_problems {
             stopping_condition: StoppingCondition::MaxGeneration(3000),
             crossover_operator_options: None,
             mutation_operator_options: None,
-            parallel: Some(false),
+            threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
             seed: Some(1),
@@ -944,7 +945,7 @@ mod test_problems {
             stopping_condition: StoppingCondition::MaxGeneration(1000),
             crossover_operator_options: None,
             mutation_operator_options: None,
-            parallel: Some(false),
+            threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
             seed: Some(1),

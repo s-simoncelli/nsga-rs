@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use log::LevelFilter;
 
 use nsga_rs::algorithms::{
-    Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, StoppingCondition, NSGA3,
+    Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, NumThreads, StoppingCondition, NSGA3,
 };
 use nsga_rs::core::builtin_problems::DTLZ1Problem;
 use nsga_rs::operators::{PolynomialMutationArgs, SimulatedBinaryCrossoverArgs};
@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         crossover_operator_options: Some(crossover_operator_options),
         mutation_operator_options: Some(mutation_operator_options),
         stopping_condition: StoppingCondition::MaxGeneration(750),
-        parallel: None,
+        threads: NumThreads::Off,
         export_history: None,
         seed: Some(1),
         resume_from_file: None,

@@ -128,7 +128,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         crossover_operator_options: None,
         mutation_operator_options: None,
         // no need to evaluate the objective in parallel
-        parallel: Some(false),
+        threads: NumThreads::None,
         // do not export intermediate solutions
         export_history: None,
         resume_from_file: None,

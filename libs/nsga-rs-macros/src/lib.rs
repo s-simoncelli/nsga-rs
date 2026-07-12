@@ -40,7 +40,7 @@ pub fn test_with_retries(attrs: TokenStream, item: TokenStream) -> TokenStream {
 /// Register new fields on a struct that contains algorithm options. This macro adds:
 ///  - the Serialize, Deserialize, Clone traits to the structure to make it serialisable and
 ///    de-serialisable.
-///  - add the following fields: stopping_condition (`StoppingCondition`), parallel (`bool`)
+///  - add the following fields: stopping_condition (`StoppingCondition`), threads (`NumThreads`)
 ///    and export_history (`Option<ExportHistory>`).
 #[proc_macro_attribute]
 pub fn as_algorithm_args(_attrs: TokenStream, input: TokenStream) -> TokenStream {
@@ -59,12 +59,12 @@ pub fn as_algorithm_args(_attrs: TokenStream, input: TokenStream) -> TokenStream
                 fields.named.push(
                     syn::Field::parse_named
                         .parse2(quote! {
-                            /// Whether the objective and constraint evaluation in [`Problem::evaluator`] should run
-                            /// using threads. If the evaluation function takes a long time to run and return the updated
-                            /// values, it is advisable to set this to `true`. This defaults to `true`.
-                            pub parallel: Option<bool>
+                            /// The number of threads to use to parallel evaluate the objective and constraint
+                            /// in [`Problem::evaluator`]. If the evaluation function takes a long time to run,
+                            /// it is advisable to set this option.
+                            pub threads: NumThreads
                         })
-                        .expect("Cannot add `parallel` field"),
+                        .expect("Cannot add `threads` field"),
                 );
                 fields.named.push(
                     syn::Field::parse_named
@@ -185,9 +185,9 @@ pub fn as_algorithm(attrs: TokenStream, input: TokenStream) -> TokenStream {
                     syn::Field::parse_named
                         .parse2(quote! {
                             /// Whether the evaluation should run using threads
-                            parallel: bool
+                            threads: NumThreads
                         })
-                        .expect("Cannot add `parallel` field"),
+                        .expect("Cannot add `threads` field"),
                 );
             }
 

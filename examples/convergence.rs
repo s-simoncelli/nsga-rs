@@ -1,7 +1,9 @@
 use std::env;
 use std::path::PathBuf;
 
-use nsga_rs::algorithms::{Algorithm, ExportHistory, NSGA2Arg, StoppingCondition, NSGA2};
+use nsga_rs::algorithms::{
+    Algorithm, ExportHistory, NSGA2Arg, NumThreads, StoppingCondition, NSGA2,
+};
 use nsga_rs::core::builtin_problems::SCHProblem;
 use nsga_rs::core::OError;
 use nsga_rs::metrics::HyperVolume;
@@ -36,7 +38,7 @@ fn main() -> Result<(), OError> {
         stopping_condition: StoppingCondition::MaxGeneration(1000),
         crossover_operator_options: None,
         mutation_operator_options: None,
-        parallel: Some(false),
+        threads: NumThreads::Off,
         export_history: Some(export_history),
         resume_from_file: None,
         seed: Some(10),

@@ -13,18 +13,56 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "python")]
+use crate::algorithms::{NSGA2Arg, NSGA3Arg};
+#[cfg(feature = "python")]
 use pyo3::exceptions::PyValueError;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
-
-#[cfg(feature = "python")]
-use crate::algorithms::{NSGA2Arg, NSGA3Arg};
 
 use crate::algorithms::StoppingCondition;
 use crate::core::{
     DataValue, Individual, IndividualExport, OError, ObjectiveDirection, Population, Problem,
     ProblemExport,
 };
+
+/// The struct to configure the number of threads. This can be set to the maximum available
+/// threads, a given number or disabled.
+#[derive(Serialize, Deserialize, Clone)]
+pub enum NumThreads {
+    /// Always use the maximum number of CPUs available. On systems with hyper-threading
+    /// enabled this equals the number of logical cores and not the physical ones.
+    Max,
+    /// Set a maximum number.
+    Use(usize),
+    /// Disable parallel processing.
+    Off,
+}
+
+impl Default for NumThreads {
+    fn default() -> Self {
+        NumThreads::Max
+    }
+}
+
+impl NumThreads {
+    pub fn get_threads(&self) -> Result<Option<usize>, OError> {
+        let max_threads = rayon::max_num_threads();
+        match &self {
+            NumThreads::Max => Ok(Some(max_threads)),
+            NumThreads::Use(number) => {
+                if *number > max_threads {
+                    return Err(OError::Generic(format!(
+                        "The number of threads ({}) must be less than the maximum available ({})",
+                        number, max_threads
+                    )));
+                } else {
+                    Ok(Some(*number))
+                }
+            }
+            NumThreads::Off => Ok(None),
+        }
+    }
+}
 
 /// The data with the elapsed time.
 #[derive(Serialize, Deserialize, Debug)]
@@ -620,33 +658,11 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     }
 
     /// Evaluate the objectives and constraints for unevaluated individuals in the population. This
-    /// updates the individual data only, runs the evaluation function in threads and increase the
-    /// `nfe` counter by the number of evaluated individuals.
-    /// This returns an error if the evaluation function fails or the evaluation function does not
-    /// provide a value for a problem constraints or objectives for one individual.
-    ///
-    /// # Arguments
-    ///
-    /// * `individuals`: The individuals to evaluate.
-    /// * `nfe`: The reference to the number of function evaluation counter.
-    ///
-    /// return `Result<(), OError>`
-    fn do_parallel_evaluation(individuals: &mut [Individual], nfe: &mut u32) -> Result<(), OError> {
-        let delta_nfe = Self::count_unevaluated(individuals);
-        individuals
-            .into_par_iter()
-            .enumerate()
-            .try_for_each(|(idx, i)| Self::evaluate_individual(idx, i))?;
-        *nfe += delta_nfe;
-        Ok(())
-    }
-
-    /// Evaluate the objectives and constraints for unevaluated individuals in the population. This
     /// updates the individual data only, runs the evaluation function in a plain loop and increase
     /// the `nfe` counter by the number of evaluated individuals.
     /// This returns an error if the evaluation function fails or the evaluation function does not
     /// provide a value for a problem constraints or objectives for one individual.
-    /// Evaluation may be performed in threads using [`Self::do_parallel_evaluation`].
+    /// Evaluation are performed in threads when `threads` is not [`NumThreads::None`].
     ///
     /// # Arguments
     ///
@@ -654,12 +670,32 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     /// * `nfe`: The reference to the number of function evaluation counter.
     ///
     /// return `Result<usize, OError>`.
-    fn do_evaluation(individuals: &mut [Individual], nfe: &mut u32) -> Result<(), OError> {
+    fn do_evaluation(
+        individuals: &mut [Individual],
+        nfe: &mut u32,
+        threads: &NumThreads,
+    ) -> Result<(), OError> {
         let delta_nfe = Self::count_unevaluated(individuals);
-        individuals
-            .iter_mut()
-            .enumerate()
-            .try_for_each(|(idx, i)| Self::evaluate_individual(idx, i))?;
+        match threads.get_threads()? {
+            Some(num_threads) => {
+                let pool = rayon::ThreadPoolBuilder::new()
+                    .num_threads(num_threads)
+                    .build()
+                    .unwrap();
+
+                pool.install(|| {
+                    individuals
+                        .into_par_iter()
+                        .enumerate()
+                        .try_for_each(|(idx, i)| Self::evaluate_individual(idx, i))
+                })?;
+            }
+            None => individuals
+                .iter_mut()
+                .enumerate()
+                .try_for_each(|(idx, i)| Self::evaluate_individual(idx, i))?,
+        }
+
         *nfe += delta_nfe;
         Ok(())
     }
@@ -1218,9 +1254,69 @@ macro_rules! create_py_reader_interface {
         }
     };
 }
-// // Export macro to parent module
+
+// Export macro to parent module
 #[cfg(feature = "python")]
 pub(crate) use create_py_reader_interface;
+
+// Custom Py object conversion
+#[cfg(feature = "python")]
+pub mod py {
+    use crate::algorithms::NumThreads;
+    use pyo3::exceptions::PyTypeError;
+    use pyo3::prelude::*;
+    use pyo3::types::PyString;
+
+    #[pyclass(name = "NumThreads")]
+    pub struct PyNumThreads;
+
+    /// Convert a python object to `NumThreads`.
+    impl FromPyObject<'_, '_> for NumThreads {
+        type Error = PyErr;
+
+        fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
+            if obj.is_none() {
+                Ok(NumThreads::default())
+            } else if let Ok(x) = obj.extract::<usize>() {
+                Ok(NumThreads::Use(x))
+            } else if let Ok(x) = obj.extract::<String>() {
+                if x == "Max" {
+                    Ok(NumThreads::Max)
+                } else if {
+                if x == "Off" {
+                    Ok(NumThreads::Off)
+                } else {
+                    Err(PyTypeError::new_err("Invalid string".to_string()))
+                }
+            } else {
+                Err(PyTypeError::new_err("Invalid type".to_string()))
+            }
+        }
+    }
+
+    impl<'py> IntoPyObject<'py> for NumThreads {
+        type Target = PyAny;
+        type Output = Bound<'py, PyAny>;
+        type Error = PyErr; // or Infallible if conversion cannot fail
+
+        fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            match self {
+                NumThreads::Max => {
+                    let s = PyString::new(py, "Max");
+                    Ok(s.into_any())
+                }
+                NumThreads::Use(number) => {
+                    let n = number.into_pyobject(py)?;
+                    Ok(n.into_any())
+                }
+                NumThreads::Off => {
+                    let s = PyString::new(py, "Off");
+                    Ok(s.into_any())
+                }
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -1228,7 +1324,7 @@ mod test {
     use std::path::Path;
     use std::sync::Arc;
 
-    use crate::algorithms::{Algorithm, NSGA2Arg, StoppingCondition, NSGA2};
+    use crate::algorithms::{Algorithm, NSGA2Arg, NumThreads, StoppingCondition, NSGA2};
     use crate::core::builtin_problems::{SCHProblem, ZTD1Problem};
 
     #[test]
@@ -1288,7 +1384,7 @@ mod test {
             stopping_condition: StoppingCondition::MaxGeneration(20),
             crossover_operator_options: None,
             mutation_operator_options: None,
-            parallel: Some(false),
+            threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
             seed: Some(10),
@@ -1309,7 +1405,7 @@ mod test {
             stopping_condition: StoppingCondition::MaxFunctionEvaluations(20),
             crossover_operator_options: None,
             mutation_operator_options: None,
-            parallel: Some(false),
+            threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
             seed: Some(10),
@@ -1334,7 +1430,7 @@ mod test {
             ]),
             crossover_operator_options: None,
             mutation_operator_options: None,
-            parallel: Some(false),
+            threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
             seed: Some(10),

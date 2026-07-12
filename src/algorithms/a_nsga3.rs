@@ -32,7 +32,7 @@ mod test_problems {
     use nsga_rs_macros::test_with_retries;
 
     use crate::algorithms::{
-        AdaptiveNSGA3, Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, StoppingCondition,
+        AdaptiveNSGA3, Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, NumThreads, StoppingCondition,
     };
     use crate::core::builtin_problems::DTLZ1Problem;
     use crate::core::test_utils::assert_approx_array_eq;
@@ -61,7 +61,7 @@ mod test_problems {
             crossover_operator_options: Some(crossover_operator_options),
             mutation_operator_options: Some(mutation_operator_options),
             stopping_condition: StoppingCondition::MaxGeneration(400),
-            parallel: None,
+            threads: NumThreads::Off,
             export_history: None,
             seed: Some(1),
             resume_from_file: None,

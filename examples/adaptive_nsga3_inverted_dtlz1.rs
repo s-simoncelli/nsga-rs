@@ -8,7 +8,7 @@ use log::LevelFilter;
 
 use nsga_rs::algorithms::{
     AdaptiveNSGA3, Algorithm, AlgorithmExport, ExportVecGroupBy, NSGA3Arg,
-    Nsga3NumberOfIndividuals, StoppingCondition, NSGA3,
+    Nsga3NumberOfIndividuals, NumThreads, StoppingCondition, NSGA3,
 };
 use nsga_rs::core::builtin_problems::DTLZ1Problem;
 use nsga_rs::operators::SimulatedBinaryCrossoverArgs;
@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         mutation_operator_options: None,
         // stop at generation 400
         stopping_condition: StoppingCondition::MaxGeneration(400),
-        parallel: None,
+        threads: NumThreads::Off,
         export_history: None,
         // to reproduce results
         seed: Some(1),
