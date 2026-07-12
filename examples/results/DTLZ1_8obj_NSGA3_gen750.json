@@ -23,7 +23,7 @@
     "stopping_condition": {
       "MaxGeneration": 750
     },
-    "parallel": null,
+    "threads": "Off",
     "export_history": null
   },
   "problem": {
