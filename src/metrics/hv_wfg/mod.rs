@@ -45,7 +45,7 @@ impl HyperVolumeWhile2012 {
         check_args(individuals, reference_point)
             .map_err(|e| OError::Metric(metric_name.clone(), e))?;
 
-        // the reference point must dominate all objectives
+        // the reference point must not dominate all objectives
         let problem = individuals[0].problem();
         for (obj_idx, (obj_name, obj)) in problem.objectives().iter().enumerate() {
             check_ref_point_coordinate(

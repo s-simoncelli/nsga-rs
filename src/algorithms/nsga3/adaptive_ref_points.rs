@@ -179,7 +179,6 @@ impl<'a> AdaptiveReferencePoints<'a> {
                 }
             }
 
-            println!("points_to_delete={:?}", points_to_delete);
             self.reference_points
                 .retain(|v| !points_to_delete.contains(&v));
         }
@@ -343,10 +342,6 @@ mod test {
         rho_j.insert(21, 0);
         rho_j.insert(22, 1);
 
-        println!("rho_j={:?}", rho_j);
-        // TODO point 21 will be deleted
-        let counter = ref_points.len();
-        println!("{:?}", counter);
         let mut a = AdaptiveReferencePoints::new(&mut ref_points, &mut rho_j, or_counter, ds.gap())
             .unwrap();
         a.calculate().unwrap();
