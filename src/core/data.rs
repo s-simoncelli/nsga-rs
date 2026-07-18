@@ -1,9 +1,7 @@
 use crate::core::OError;
 
 #[cfg(feature = "python")]
-use pyo3::IntoPyObject;
-#[cfg(feature = "python")]
-use pyo3::IntoPyObjectRef;
+use pyo3::prelude::*;
 
 use serde::{Deserialize, Serialize, Serializer};
 use std::collections::HashMap;
@@ -11,7 +9,6 @@ use std::collections::HashMap;
 /// The data type and value that can be stored in an individual or algorithm..
 #[derive(Clone, Deserialize, Debug)]
 #[serde(untagged)]
-#[cfg_attr(feature = "python", derive(IntoPyObjectRef, IntoPyObject))]
 pub enum DataValue {
     /// The value for a floating-point number. This is a f64.
     Real(f64),
@@ -123,5 +120,26 @@ impl DataValue {
         } else {
             Err(OError::WrongDataType("usize".to_string()))
         }
+    }
+}
+
+#[cfg(feature = "python")]
+// NOTE: trait was implemented as derive IntoPyObjectRef and IntoPyObject macros do not
+// work on self-referenced enums
+impl<'py> IntoPyObject<'py> for DataValue {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> PyResult<Self::Output> {
+        let result = match self {
+            DataValue::Real(v) => v.into_pyobject(py)?.into_any(),
+            DataValue::Integer(v) => v.into_pyobject(py)?.into_any(),
+            DataValue::USize(v) => v.into_pyobject(py)?.into_any(),
+            DataValue::Vector(v) => v.into_pyobject(py)?.into_any(),
+            DataValue::DataVector(v) => v.into_pyobject(py)?.into_any(),
+            DataValue::Map(v) => v.into_pyobject(py)?.into_any(),
+        };
+        Ok(result)
     }
 }

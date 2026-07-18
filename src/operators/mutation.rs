@@ -37,8 +37,8 @@ pub struct PolynomialMutationArgs {
 impl PolynomialMutationArgs {
     /// Initialise the Polynomial mutation (PM) operator with the default parameters. With a
     /// distribution index or index parameter of `20` and variable probability equal `1` divided by
-    /// the number of real variables in the problem (i.e. each variable will have the same
-    /// probability of being mutated).
+    /// the number of real or integer variables in the problem (i.e. each variable will have
+    /// the same probability of being mutated).
     ///
     /// # Arguments
     ///
@@ -46,12 +46,13 @@ impl PolynomialMutationArgs {
     ///
     /// returns: `Self`
     pub fn default(problem: &Problem) -> Self {
-        let num_real_vars = problem
+        let num_vars = problem
             .variables()
             .iter()
-            .filter(|(_, v)| v.is_real())
+            .filter(|(_, v)| v.is_real() | v.is_integer())
             .count() as f64;
-        let variable_probability = 1.0 / num_real_vars;
+        let variable_probability = 1.0 / num_vars;
+
         Self {
             index_parameter: 20.0,
             variable_probability,

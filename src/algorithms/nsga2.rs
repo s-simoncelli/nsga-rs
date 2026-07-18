@@ -229,7 +229,7 @@ impl NSGA2 {
         log_opts.push_str(
             format!(
                 "\t* Mutation index parameter {:>9}\n\t* Mutation var probability {:>10}",
-                mutation_options.index_parameter, crossover_options.variable_probability,
+                mutation_options.index_parameter, mutation_options.variable_probability,
             )
             .as_str(),
         );
