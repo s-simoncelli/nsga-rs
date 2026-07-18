@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::fs::read_dir;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Instant, SystemTime};
 use std::{fmt, fs};
 
 use chrono::{DateTime, Utc};
@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "python")]
 use crate::algorithms::{NSGA2Arg, NSGA3Arg};
+use crate::utils::{elapsed, elapsed_as_string};
 #[cfg(feature = "python")]
 use pyo3::exceptions::PyValueError;
 #[cfg(feature = "python")]
@@ -619,22 +620,14 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     ///
     /// return: `[u64; 3]`. An array with the number of elapsed hours, minutes and seconds.
     fn elapsed(&self) -> [u64; 3] {
-        let duration = self.start_time().elapsed();
-        let seconds = duration.as_secs() % 60;
-        let minutes = (duration.as_secs() / 60) % 60;
-        let hours = (duration.as_secs() / 60) / 60;
-        [hours, minutes, seconds]
+        elapsed(self.start_time().elapsed().as_secs())
     }
 
     /// Format the elapsed time as string.
     ///
     /// return: `String`.
     fn elapsed_as_string(&self) -> String {
-        let [hours, minutes, seconds] = self.elapsed();
-        format!(
-            "{:0>2} hours, {:0>2} minutes and {:0>2} seconds",
-            hours, minutes, seconds
-        )
+        elapsed_as_string(self.start_time().elapsed().as_secs())
     }
 
     /// Get the ThreadPool instance.
@@ -772,7 +765,8 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
         }
 
         let mut history_gen_step: usize = 0;
-        loop {
+        let mut avg_time = 0.0;
+        'gen_loop: loop {
             // Export history
             if let Some(export) = self.export_history() {
                 if history_gen_step == export.generation_step - 1 {
@@ -785,15 +779,38 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
 
             // Evolve population
             info!("Generation #{}", self.generation());
+            let now = SystemTime::now();
             self.evolve()?;
+            if let Result::Ok(elapsed) = now.elapsed() {
+                avg_time = (avg_time + elapsed.as_secs_f64()) / 2.0;
+            }
             info!(
                 "Evolved generation #{} - Elapsed Time: {}",
                 self.generation(),
                 self.elapsed_as_string()
             );
-            debug!("========================");
-            debug!("");
-            debug!("");
+
+            // print time left. For vectorial stopping condition this cannot be calculated
+            match self.stopping_condition() {
+                StoppingCondition::MaxDurationAsMinutes(max_t) => {
+                    let left = max_t * 60 - self.start_time().elapsed().as_secs() as u32;
+                    info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                }
+                StoppingCondition::MaxDurationAsHours(max_t) => {
+                    let left = max_t * 60 * 24 - self.start_time().elapsed().as_secs() as u32;
+                    info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                }
+                StoppingCondition::MaxGeneration(gen) => {
+                    let left = (gen - self.generation()) as f64 * avg_time;
+                    info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                }
+                StoppingCondition::MaxFunctionEvaluations(nfe) => {
+                    let left = (nfe - self.number_of_function_evaluations()) as f64 * avg_time
+                        / self.number_of_function_evaluations() as f64;
+                    info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                }
+                _ => {}
+            }
 
             // Termination
             let cond = self.stopping_condition();
@@ -806,8 +823,12 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
 
                 info!("Stopping evolution because the {} was reached", cond.name());
                 info!("Took {}", self.elapsed_as_string());
-                break;
+                break 'gen_loop;
             }
+
+            info!("========================");
+            debug!("");
+            debug!("");
         }
 
         Ok(())
@@ -991,7 +1012,12 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
             .filter_map(|res| res.ok())
             .map(|dir_entry| dir_entry.path())
             .filter_map(|path| {
-                if path.extension().map_or(false, |ext| ext == "json") {
+                if path.extension().map_or(false, |ext| ext == "json")
+                    & path.file_name().map_or(false, |name| {
+                        name.to_str().unwrap().starts_with("History_")
+                            | name.to_str().unwrap().starts_with("Final_")
+                    })
+                {
                     Some(path)
                 } else {
                     None
@@ -1235,10 +1261,9 @@ macro_rules! create_py_reader_interface {
 
             #[staticmethod]
             pub fn convergence_data(
-                folder: String,
+                folder: PathBuf,
                 reference_point: Vec<f64>,
             ) -> PyResult<(Vec<u32>, Vec<chrono::DateTime<chrono::Utc>>, Vec<f64>)> {
-                let folder = PathBuf::from(folder);
                 let all_serialise_data = $type::read_json_files(&folder)
                     .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
                 let data =
