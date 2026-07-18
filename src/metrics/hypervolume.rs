@@ -88,13 +88,13 @@ pub(crate) fn check_ref_point_coordinate(
     ref_point_coordinate: f64,
     coordinate_idx: usize,
 ) -> Result<(), String> {
-    // the reference point must dominate all objectives
+    // the reference point must not dominate any objectives
     let max_obj = vector_max(objective_values).map_err(|e| e.to_string())?;
 
     if (objective.direction() == ObjectiveDirection::Minimise) & (ref_point_coordinate <= max_obj) {
         return Err(
             format!(
-                "The coordinate ({}) of the reference point #{} must be strictly larger than the maximum value of objective '{}' ({}). The reference point must dominate all objectives.",
+                "The coordinate ({}) of the reference point #{} must be strictly larger than the maximum value of objective '{}' ({}). The reference point must not dominate any objectives.",
                 ref_point_coordinate ,
                 coordinate_idx,
                 objective.name(),
@@ -105,7 +105,7 @@ pub(crate) fn check_ref_point_coordinate(
     {
         return Err(
             format!(
-                "The coordinate ({}) of the reference point #{} must be strictly smaller than the minimum value of objective '{}' ({}). The reference point must dominate all objectives.",
+                "The coordinate ({}) of the reference point #{} must be strictly smaller than the minimum value of objective '{}' ({}). The reference point must not dominate any objectives.",
                 ref_point_coordinate,
                 coordinate_idx,
                 objective.name(),

@@ -189,6 +189,35 @@ pub fn has_unique_elements_by_key<I: Sized, J: Sized + Ord, F: Fn(&I) -> J>(
     values.iter().all(move |x| unique.insert(x))
 }
 
+/// Get the elapsed hours, minutes and seconds from `duration`.
+///
+/// # Arguments
+///
+/// * `duration`: The duration in seconds.
+///
+/// return: `[u64; 3]`. An array with the number of elapsed hours, minutes and seconds.
+pub fn elapsed(duration: u64) -> [u64; 3] {
+    let seconds = duration % 60;
+    let minutes = (duration / 60) % 60;
+    let hours = (duration / 60) / 60;
+    [hours, minutes, seconds]
+}
+
+/// Format the `duration` as string.
+///
+/// # Arguments
+///
+/// * `duration`: The duration in seconds.
+///
+/// return: `String`.
+pub fn elapsed_as_string(duration: u64) -> String {
+    let [hours, minutes, seconds] = elapsed(duration);
+    format!(
+        "{:0>2} hours, {:0>2} minutes and {:0>2} seconds",
+        hours, minutes, seconds
+    )
+}
+
 #[cfg(test)]
 mod test {
     use crate::utils::{argmin_by, argsort, Sort};
