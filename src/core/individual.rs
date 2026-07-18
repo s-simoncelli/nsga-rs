@@ -415,6 +415,26 @@ impl Individual {
         ind.set_evaluated();
         Ok(ind)
     }
+
+    /// Get the vector with the feasible objective values for the individual. The size
+    /// of the vector will equal the number of problem objectives. To get also infeasible
+    /// objectives use ['Self::get_objective_values(()`]. This returns `None` if the
+    /// individual has at least one infeasible objective.
+    ///
+    /// returns: `Option<Result<Vec<f64>, OError>>`
+    pub fn get_feasible_objective_values(&self) -> Option<Result<Vec<f64>, OError>> {
+        if !self.is_feasible() {
+            None
+        } else {
+            Some(
+                self.problem
+                    .objective_names()
+                    .iter()
+                    .map(|obj_name| self.get_objective_value(obj_name))
+                    .collect(),
+            )
+        }
+    }
 }
 
 #[cfg_attr(feature = "python", pymethods)]
@@ -538,8 +558,9 @@ impl Individual {
         Ok(self.objective_values[name])
     }
 
-    /// Get the vector with the objective values for the individual. The size of the vector will
-    /// equal the number of problem objectives.
+    /// Get the vector with the objective values for the individual. The size of the
+    /// vector will equal the number of problem objectives. To get only feasible
+    /// objectives use ['Self::get_feasible_objective_values(()`].
     ///
     /// returns: `Result<Vec<f64>, OError>`
     pub fn get_objective_values(&self) -> Result<Vec<f64>, OError> {
