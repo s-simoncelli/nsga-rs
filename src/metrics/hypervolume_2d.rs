@@ -22,7 +22,7 @@ impl HyperVolume2D {
     /// Pareto front and the chosen `reference_point`.
     ///
     /// **IMPLEMENTATION NOTES**:
-    /// 1) The reference point must dominate the values of all objectives.
+    /// 1) The reference point must not dominate the values of all objectives.
     /// 2) For problems with at least one maximised objective, this implementation ensures that the
     ///    Pareto front shape is strictly convex and has the same orientation of minimisation problems
     ///    by inverting the sign of the objective values to maximise, and the reference point
@@ -79,7 +79,7 @@ impl HyperVolume2D {
             };
             let objectives = individuals.objective_values(obj_name)?;
 
-            // the reference point must dominate all objectives
+            // the reference point must not dominate any objectives
             check_ref_point_coordinate(&objectives, obj, reference_point[obj_idx], obj_idx + 1)
                 .map_err(|e| OError::Metric(metric_name.clone(), e))?;
 
@@ -205,7 +205,12 @@ mod test {
         // mirrored ref point - return error
         let ref_point = [-10.0, -10.0];
         let hv = HyperVolume2D::new(&mut ind, &ref_point);
-        assert!(hv.unwrap_err().to_string().contains("must dominate all"));
+
+        println!("{:?}", hv);
+        assert!(hv
+            .unwrap_err()
+            .to_string()
+            .contains("must not dominate any"));
     }
 
     #[test]
