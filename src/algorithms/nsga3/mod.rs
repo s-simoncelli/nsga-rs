@@ -1,5 +1,6 @@
 use log::{debug, info, warn};
 use rand::RngCore;
+use rayon::ThreadPool;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::ops::Rem;
@@ -9,7 +10,7 @@ use crate::algorithms::nsga3::adaptive_ref_points::AdaptiveReferencePoints;
 use crate::algorithms::nsga3::associate::AssociateToRefPoint;
 use crate::algorithms::nsga3::niching::Niching;
 use crate::algorithms::nsga3::normalise::Normalise;
-use crate::algorithms::{Algorithm, NSGA2};
+use crate::algorithms::{Algorithm, NumThreads, NSGA2};
 use crate::core::utils::get_rng;
 use crate::core::{DataValue, Individual, OError};
 use crate::operators::{
@@ -124,7 +125,7 @@ pub struct NSGA3Arg {
 #[pymethods]
 impl NSGA3Arg {
     #[new]
-    #[pyo3(signature = (number_of_individuals, number_of_partitions, stopping_condition, crossover_operator_options=None, mutation_operator_options=None, resume_from_file=None, parallel=None, export_history=None, seed=None))]
+    #[pyo3(signature = (number_of_individuals, number_of_partitions, stopping_condition, crossover_operator_options=None, mutation_operator_options=None, resume_from_file=None, threads=None, export_history=None, seed=None))]
     fn py_new(
         number_of_individuals: Py<PyAny>,
         number_of_partitions: NumberOfPartitions,
@@ -132,11 +133,12 @@ impl NSGA3Arg {
         crossover_operator_options: Option<SimulatedBinaryCrossoverArgs>,
         mutation_operator_options: Option<PolynomialMutationArgs>,
         resume_from_file: Option<PathBuf>,
-        parallel: Option<bool>,
+        threads: Option<NumThreads>,
         export_history: Option<ExportHistory>,
         seed: Option<u64>,
     ) -> PyResult<Self> {
         let number_of_individuals = Python::attach(|py| number_of_individuals.extract(py))?;
+        let threads = threads.unwrap_or_default();
         Ok(NSGA3Arg {
             number_of_individuals,
             number_of_partitions,
@@ -145,7 +147,7 @@ impl NSGA3Arg {
             seed,
             stopping_condition,
             resume_from_file,
-            parallel,
+            threads,
             export_history,
         })
     }
@@ -325,7 +327,7 @@ impl NSGA3 {
             nfe: 0,
             stopping_condition: options.stopping_condition,
             start_time: Instant::now(),
-            parallel: options.parallel.unwrap_or(true),
+            thread_pool: Self::build_thread_pool(options.threads)?,
             export_history: options.export_history,
             rng: get_rng(options.seed),
             args: nsga3_args,
@@ -394,11 +396,11 @@ impl Algorithm<NSGA3Arg> for NSGA3 {
     /// return: `Result<(), OError>`
     fn initialise(&mut self) -> Result<(), OError> {
         info!("Evaluating initial population");
-        if self.parallel {
-            NSGA3::do_parallel_evaluation(self.population.individuals_as_mut(), &mut self.nfe)?;
-        } else {
-            NSGA3::do_evaluation(self.population.individuals_as_mut(), &mut self.nfe)?;
-        }
+        NSGA3::do_evaluation(
+            self.population.individuals_as_mut(),
+            &mut self.nfe,
+            &self.thread_pool,
+        )?;
 
         info!("Initial evaluation completed");
         self.generation += 1;
@@ -440,11 +442,11 @@ impl Algorithm<NSGA3Arg> for NSGA3 {
         debug!("New population size is {}", self.population.len());
 
         debug!("Evaluating population");
-        if self.parallel {
-            NSGA3::do_parallel_evaluation(self.population.individuals_as_mut(), &mut self.nfe)?;
-        } else {
-            NSGA3::do_evaluation(self.population.individuals_as_mut(), &mut self.nfe)?;
-        }
+        NSGA3::do_evaluation(
+            self.population.individuals_as_mut(),
+            &mut self.nfe,
+            &self.thread_pool,
+        )?;
         debug!("Evaluation done");
 
         debug!("Calculating fronts and ranks for new population");
@@ -579,7 +581,7 @@ mod test_problems {
     use nsga_rs_macros::test_with_retries;
 
     use crate::algorithms::{
-        Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, StoppingCondition, NSGA3,
+        Algorithm, NSGA3Arg, Nsga3NumberOfIndividuals, NumThreads, StoppingCondition, NSGA3,
     };
     use crate::core::builtin_problems::{DTLZ1Problem, DTLZ2Problem};
     use crate::core::test_utils::{assert_approx_array_eq, check_value_in_range};
@@ -644,7 +646,7 @@ mod test_problems {
             mutation_operator_options: Some(mutation_operator_options),
             // see Table III
             stopping_condition: StoppingCondition::MaxGeneration(max_gen),
-            parallel: None,
+            threads: NumThreads::Off,
             resume_from_file: None,
             export_history: None,
             seed: Some(1),
@@ -745,7 +747,7 @@ mod test_problems {
             // see Table III
             stopping_condition: StoppingCondition::MaxGeneration(400),
             resume_from_file: None,
-            parallel: None,
+            threads: NumThreads::Off,
             export_history: None,
             seed: Some(1),
         };

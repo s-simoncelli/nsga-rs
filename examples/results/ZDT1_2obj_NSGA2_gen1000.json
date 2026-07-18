@@ -6,7 +6,7 @@
     "stopping_condition": {
       "MaxGeneration": 1000
     },
-    "parallel": false,
+    "threads": "Off",
     "export_history": null,
     "seed": 10
   },

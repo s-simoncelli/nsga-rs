@@ -8,7 +8,7 @@
     "stopping_condition": {
       "MaxGeneration": 1000
     },
-    "parallel": false,
+    "threads": "Off",
     "export_history": {
       "generation_step": 100,
       "destination": "/Users/stefano/RustroverProjects/GA/examples/results/convergence"

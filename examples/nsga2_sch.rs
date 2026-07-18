@@ -6,7 +6,9 @@ use gnuplot::PlotOption::{Caption, Color, LineWidth, PointSymbol};
 use gnuplot::{AutoOption, AxesCommon, Figure};
 use log::LevelFilter;
 
-use nsga_rs::algorithms::{Algorithm, AlgorithmExport, NSGA2Arg, StoppingCondition, NSGA2};
+use nsga_rs::algorithms::{
+    Algorithm, AlgorithmExport, NSGA2Arg, NumThreads, StoppingCondition, NSGA2,
+};
 use nsga_rs::core::builtin_problems::SCHProblem;
 
 /// Solve the Schaffer’s problem (SCH) where the following 2 objectives are minimised:
@@ -35,7 +37,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         crossover_operator_options: None,
         mutation_operator_options: None,
         // no need to evaluate the objective in parallel
-        parallel: Some(false),
+        threads: NumThreads::Off,
         // do not export intermediate solutions
         export_history: None,
         // to reproduce results
