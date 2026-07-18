@@ -1,3 +1,30 @@
+## [1.4.0] - 2026-07-18
+
+### 🚀 Features
+
+- Load pool thread only once and do not set max threads on unlimited threads
+- Added estimation of time left to reach stopping condition with max duration, generation and function evaluations
+
+### 🐛 Bug Fixes
+
+- Fixed syntax error in NumThreads to py object
+- Replaced "parallel" option with "threads" in example results
+- Replaced "parallel" option with "threads" in example history results
+- In NSGA summary print correct vaue of variable probability of mutation operator
+- In mutation operator, calculate the variable probability by also including integer types
+
+### 🧪 Testing
+
+- Fixed tests when checking for ref point error string
+- Fixed metrics::hypervolume_2d::test::test_non_dominated_solutions_min_objectives when checking for error
+
+### ⚙️ Miscellaneous Tasks
+
+- Fixed tagging
+- Update pyo3 min version to 0.28.0
+- Manually implemented IntoPyObject trait for DataValue as pyo3 derive macros do not work with self-referenced enums
+- Improve convergence example to use offset to make sure it never return Err due to result randomness
+- Increase offset in convergence example to avoid random errors in tests due to RNG
 ## [1.3.0] - 2026-07-03
 
 ### 🚀 Features
@@ -5,6 +32,7 @@
 - Moved plotting functionalities to rust with gnuplot
 - Added get_min_objectives and get_max_objectives methods to Population and Individuals structs
 - Added create_py_reader_interface macro to export Python reader and added tests
+- Added option to specify the number of threads for parallel evaluation using `NumThreads`. Previously it was only possible to use no threads or the available max
 
 ### 🐛 Bug Fixes
 
@@ -38,6 +66,8 @@
 - Added new publish CI to bump version, generate changelog and publish crate
 - Fixed publish CI to calculate tag on bump
 - Tag repo in publish CI
+- Change Cargo.toml version after bumping
+- *(release)* V1.3.0
 ## [1.2.2] - 2025-03-22
 
 ### 🚀 Features

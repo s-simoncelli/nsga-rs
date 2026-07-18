@@ -612,7 +612,7 @@ dependencies = [
 
 [[package]]
 name = "nsga_rs"
-version = "1.3.0"
+version = "1.4.0"
 dependencies = [
  "chrono",
  "env_logger",
