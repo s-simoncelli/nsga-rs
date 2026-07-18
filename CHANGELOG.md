@@ -1,3 +1,12 @@
+## [1.4.1] - 2026-07-18
+
+### 🚀 Features
+
+- Added Individual::get_feasible_objective_values to get vector with feasible objectives
+
+### ⚙️ Miscellaneous Tasks
+
+- Renamed HyperVolume::from_individual to HyperVolume::from_individuals
 ## [1.4.0] - 2026-07-18
 
 ### 🚀 Features
@@ -25,6 +34,7 @@
 - Manually implemented IntoPyObject trait for DataValue as pyo3 derive macros do not work with self-referenced enums
 - Improve convergence example to use offset to make sure it never return Err due to result randomness
 - Increase offset in convergence example to avoid random errors in tests due to RNG
+- *(release)* 1.4.0
 ## [1.3.0] - 2026-07-03
 
 ### 🚀 Features

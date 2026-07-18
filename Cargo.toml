@@ -1,6 +1,6 @@
 [package]
 name = "nsga_rs"
-version = "1.4.0"
+version = "1.4.1"
 authors = [
     "Stefano Simoncelli <16114781+s-simoncelli@users.noreply.github.com>",
 ]
