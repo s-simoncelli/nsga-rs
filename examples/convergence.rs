@@ -68,7 +68,7 @@ fn main() -> Result<(), OError> {
     println!("Reference point: {:?}", ref_point);
 
     // calculate metric at the last iteration
-    let hv = HyperVolume::from_individual(&mut results.individuals, &ref_point)?;
+    let hv = HyperVolume::from_individuals(&mut results.individuals, &ref_point)?;
     println!("Hyper-volume at last generation is {}", hv);
 
     // calculate the hyper-volume at all generations to check the overall convergence

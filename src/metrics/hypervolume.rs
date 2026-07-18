@@ -126,7 +126,7 @@ pub(crate) fn check_ref_point_coordinate(
 ///   in [`HyperVolumeWhile2012`].
 ///
 /// The hyper-volume can be calculated from the following sources:
-/// - an array of [`Individual`] using [`HyperVolume::from_individual`]
+/// - an array of [`Individual`] using [`HyperVolume::from_individuals`]
 /// - an array of objectives given as `f64` using [`HyperVolume::from_values`]
 /// - a JSON file using [`HyperVolume::from_file`]
 /// - a folder with JSON files using [`HyperVolume::from_files`]
@@ -190,7 +190,7 @@ impl HyperVolume {
     ///   the individual's values using [`HyperVolume::estimate_reference_point`].
     ///
     /// returns: `Result<f64, OError>`
-    pub fn from_individual(
+    pub fn from_individuals(
         individuals: &mut [Individual],
         reference_point: &[f64],
     ) -> Result<f64, OError> {
@@ -247,7 +247,7 @@ impl HyperVolume {
             }
             new_individuals.push(ind);
         }
-        HyperVolume::from_individual(&mut new_individuals, reference_point)
+        HyperVolume::from_individuals(&mut new_individuals, reference_point)
     }
 
     /// Calculate the hyper-volume using serialised objective values (i.e. exported in a JSON file

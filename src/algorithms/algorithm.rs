@@ -1224,7 +1224,7 @@ macro_rules! create_py_reader_interface {
 
             /// Calculate the hyper-volume metric.
             pub fn hyper_volume(&mut self, reference_point: Vec<f64>) -> PyResult<f64> {
-                let hv = crate::metrics::HyperVolume::from_individual(
+                let hv = crate::metrics::HyperVolume::from_individuals(
                     &mut self.export_data.individuals,
                     &reference_point,
                 )
