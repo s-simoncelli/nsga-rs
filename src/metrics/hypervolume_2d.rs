@@ -79,7 +79,7 @@ impl HyperVolume2D {
             };
             let objectives = individuals.objective_values(obj_name)?;
 
-            // the reference point must not dominate all objectives
+            // the reference point must not dominate any objectives
             check_ref_point_coordinate(&objectives, obj, reference_point[obj_idx], obj_idx + 1)
                 .map_err(|e| OError::Metric(metric_name.clone(), e))?;
 
@@ -205,10 +205,12 @@ mod test {
         // mirrored ref point - return error
         let ref_point = [-10.0, -10.0];
         let hv = HyperVolume2D::new(&mut ind, &ref_point);
+
+        println!("{:?}", hv);
         assert!(hv
             .unwrap_err()
             .to_string()
-            .contains("must not dominate all"));
+            .contains("must not dominate any"));
     }
 
     #[test]

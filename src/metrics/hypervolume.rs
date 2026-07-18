@@ -88,7 +88,7 @@ pub(crate) fn check_ref_point_coordinate(
     ref_point_coordinate: f64,
     coordinate_idx: usize,
 ) -> Result<(), String> {
-    // the reference point must not dominate all objectives
+    // the reference point must not dominate any objectives
     let max_obj = vector_max(objective_values).map_err(|e| e.to_string())?;
 
     if (objective.direction() == ObjectiveDirection::Minimise) & (ref_point_coordinate <= max_obj) {

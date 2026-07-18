@@ -52,7 +52,7 @@ impl HyperVolumeFonseca2006 {
             ));
         }
 
-        // the reference point must not dominate all objectives
+        // the reference point must not dominate any objectives
         let problem = individuals[0].problem();
         for (obj_idx, (obj_name, obj)) in problem.objectives().iter().enumerate() {
             check_ref_point_coordinate(
