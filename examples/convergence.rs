@@ -47,17 +47,26 @@ fn main() -> Result<(), OError> {
     algo.run()?;
     let mut results = algo.get_results();
 
-    let serialised_data = NSGA2::read_json_files(&out_path)?;
-    let ref_point = HyperVolume::estimate_reference_point_from_files(&serialised_data, None)?;
-    println!("Reference point: {:?}", ref_point);
+    // let serialised_data = NSGA2::read_json_files(&out_path)?;
+    let file_gen_200 = out_path.join("History_NSGA2_gen200.json");
+    let serialised_data = NSGA2::read_json_file(&file_gen_200)?;
+    let offset = Some(vec![0.1, 0.1]);
+    let ref_point =
+        HyperVolume::estimate_reference_point_from_file(&serialised_data, offset.clone())?;
 
     // calculate metric from the history file
-    let serialised_data = NSGA2::read_json_file(&out_path.join("History_NSGA2_gen200.json"))?;
+    let serialised_data = NSGA2::read_json_file(&file_gen_200)?;
     let hv = HyperVolume::from_file(&serialised_data, &ref_point)?;
     println!(
         "Hyper-volume at generation #{} is {}",
         hv.generation, hv.value
     );
+
+    // calculate ref point using all results
+    let serialised_data = NSGA2::read_json_files(&out_path)?;
+    let ref_point =
+        HyperVolume::estimate_reference_point_from_files(&serialised_data, offset.clone())?;
+    println!("Reference point: {:?}", ref_point);
 
     // calculate metric at the last iteration
     let hv = HyperVolume::from_individual(&mut results.individuals, &ref_point)?;
@@ -70,9 +79,6 @@ fn main() -> Result<(), OError> {
     println!("Hyper-volumes values: {:?}", hvs.values());
 
     // plot the convergence/hyper-volume chart
-    let serialised_data = NSGA2::read_json_files(&out_path)?;
-    let ref_point = HyperVolume::estimate_reference_point_from_files(&serialised_data, None)?;
-
     HyperVolume::plot_from_files(
         &serialised_data,
         &ref_point,
