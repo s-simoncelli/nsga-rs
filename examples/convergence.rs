@@ -47,10 +47,9 @@ fn main() -> Result<(), OError> {
     algo.run()?;
     let mut results = algo.get_results();
 
-    // let serialised_data = NSGA2::read_json_files(&out_path)?;
     let file_gen_200 = out_path.join("History_NSGA2_gen200.json");
     let serialised_data = NSGA2::read_json_file(&file_gen_200)?;
-    let offset = Some(vec![0.1, 0.1]);
+    let offset = Some(vec![100.0, 100.0]);
     let ref_point =
         HyperVolume::estimate_reference_point_from_file(&serialised_data, offset.clone())?;
 
