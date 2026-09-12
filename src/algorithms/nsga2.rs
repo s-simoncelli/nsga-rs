@@ -194,7 +194,7 @@ impl<'a> NSGA2<'a> {
     /// * `individuals`: The individuals in a non-dominated front.
     ///
     /// returns: `Result<(), OError>`
-    fn set_crowding_distance(mut individuals: &mut [Individual]) -> Result<(), OError> {
+    pub(crate) fn set_crowding_distance(mut individuals: &mut [Individual]) -> Result<(), OError> {
         let inf = DataValue::Real(f64::MAX); // do not use INF because is not supported by serde
         let total_individuals = individuals.len();
 
