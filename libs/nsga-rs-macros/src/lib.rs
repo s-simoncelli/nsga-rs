@@ -275,7 +275,7 @@ pub fn algorithm(attrs: TokenStream, input: TokenStream) -> TokenStream {
 pub fn algorithm_trait_items(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(input as syn::ItemImpl);
     let name = if let syn::Type::Path(tp) = &*ast.self_ty {
-        tp.path.clone()
+        tp.path.segments.last().unwrap().ident.clone()
     } else {
         unimplemented!("Token not supported")
     };
