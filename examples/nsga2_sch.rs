@@ -1,6 +1,7 @@
 use std::env;
 use std::error::Error;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use gnuplot::PlotOption::{Caption, Color, LineWidth, PointSymbol};
 use gnuplot::{AutoOption, AxesCommon, Figure};
@@ -20,7 +21,7 @@ use nsga_rs::core::builtin_problems::SCHProblem;
 ///
 /// Make sure to compile this in release mode to speed up the calculation:
 ///
-/// `cargo run --example nsga2 -p nsga_rs --feature plotting --release`
+/// `cargo run --example nsga2 -p nsga_rs --release`
 fn main() -> Result<(), Box<dyn Error>> {
     // Add log
     env_logger::builder().filter_level(LevelFilter::Info).init();
@@ -44,17 +45,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         resume_from_file: None,
         seed: Some(10),
     };
-    let mut algo = NSGA2::new(problem, args)?;
+    let mut algo = NSGA2::new(Arc::new(problem), args)?;
     algo.run()?;
 
     // Export serialised results at last generation
     let out_path = PathBuf::from(&env::current_dir().unwrap())
         .join("examples")
         .join("results");
-    algo.save_to_json(&out_path, Some("SCH_2obj"))?;
+    let data_file = algo.save_to_json(&out_path, Some("SCH_2obj"))?;
 
     // Plot the Pareto front using the exported data at the last generation
-    let data_file = out_path.join("SCH_2obj_NSGA2_gen250.json");
     let serialised_data = NSGA2::read_json_file(&data_file)?;
     serialised_data.plot_front(&out_path.join("SCH_2obj_NSGA2_Pareto_front.png"), None)?;
 

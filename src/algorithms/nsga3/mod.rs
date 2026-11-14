@@ -10,7 +10,9 @@ use crate::algorithms::nsga3::adaptive_ref_points::AdaptiveReferencePoints;
 use crate::algorithms::nsga3::associate::AssociateToRefPoint;
 use crate::algorithms::nsga3::niching::Niching;
 use crate::algorithms::nsga3::normalise::Normalise;
-use crate::algorithms::{Algorithm, NumThreads, NSGA2};
+#[cfg(feature = "python")]
+use crate::algorithms::PyStoppingConditionMap;
+use crate::algorithms::{algorithm_options_as_str, Algorithm, EvolveStatus, NumThreads};
 use crate::core::utils::get_rng;
 use crate::core::{DataValue, Individual, OError};
 use crate::operators::{
@@ -18,7 +20,7 @@ use crate::operators::{
     Selector, SimulatedBinaryCrossover, SimulatedBinaryCrossoverArgs, TournamentSelector,
 };
 use crate::utils::{fast_non_dominated_sort, DasDarren1998, NumberOfPartitions};
-use nsga_rs_macros::{as_algorithm, as_algorithm_args, impl_algorithm_trait_items};
+use nsga_rs_macros::{algorithm, algorithm_args, algorithm_trait_items};
 
 #[cfg(feature = "python")]
 use pyo3::exceptions::PyTypeError;
@@ -86,38 +88,17 @@ impl<'py> IntoPyObject<'py> for Nsga3NumberOfIndividuals {
 }
 
 /// Input arguments for the NSGA3 algorithm.
-#[as_algorithm_args]
-#[cfg_attr(feature = "python", pyclass(get_all, from_py_object))]
+///
+/// NOTE: in [`SimulatedBinaryCrossoverArgs`] it is advisable to use a large `distribution_index`
+/// to prevent the problem explained in Section IIa point #3 in the paper. With many objectives,
+/// "two distant parent solutions are likely to produce offspring solutions that are also distant
+/// from parents", which should prevented.
+#[algorithm_args]
 pub struct NSGA3Arg {
     /// The number of individuals in the population.
     pub number_of_individuals: Nsga3NumberOfIndividuals,
     /// The number of partitions to use to calculate the reference points or weight.
     pub number_of_partitions: NumberOfPartitions,
-    /// The options of the Simulated Binary Crossover (SBX) operator. This operator is used to
-    /// generate new children by recombining the variables of parent solutions. This defaults to
-    /// [`SimulatedBinaryCrossoverArgs::default()`].
-    /// NOTE: it is advisable to use a large `distribution_index` to prevent the problem explained in
-    /// Section IIa point #3 in the paper. With many objectives, "two distant parent solutions are
-    /// likely to produce offspring solutions that are also distant from parents", which should be
-    /// prevented.
-    pub crossover_operator_options: Option<SimulatedBinaryCrossoverArgs>,
-    /// The options to Polynomial Mutation (PM) operator used to mutate the variables of an
-    /// individual. This defaults to [`PolynomialMutationArgs::default()`],
-    /// with a distribution index or index parameter of `20` and variable probability equal `1`
-    /// divided by the number of real variables in the problem (i.e., each variable will have the
-    /// same probability of being mutated).
-    pub mutation_operator_options: Option<PolynomialMutationArgs>,
-    /// Instead of initialising the population with random variables, see the initial population
-    /// with  the variable values from a JSON files exported with this tool. This option lets you
-    /// restart the evolution from a previous generation; you can use any history file (exported
-    /// when the field `export_history`) or the file exported when the stopping condition was reached.
-    pub resume_from_file: Option<PathBuf>,
-    /// The seed used in the random number generator (RNG). You can specify a seed in case you want
-    /// to try to reproduce results. NSGA2 is a stochastic algorithm that relies on an RNG at
-    /// different steps (when population is initially generated, during selection, crossover and
-    /// mutation) and, as such, may lead to slightly different solutions. The seed is randomly
-    /// picked if this is `None`.
-    pub seed: Option<u64>,
 }
 
 /// Initialise the `NSGA3Arg` as python class.
@@ -129,7 +110,7 @@ impl NSGA3Arg {
     fn py_new(
         number_of_individuals: Py<PyAny>,
         number_of_partitions: NumberOfPartitions,
-        stopping_condition: StoppingCondition,
+        stopping_condition: PyStoppingConditionMap,
         crossover_operator_options: Option<SimulatedBinaryCrossoverArgs>,
         mutation_operator_options: Option<PolynomialMutationArgs>,
         resume_from_file: Option<PathBuf>,
@@ -145,7 +126,7 @@ impl NSGA3Arg {
             crossover_operator_options,
             mutation_operator_options,
             seed,
-            stopping_condition,
+            stopping_condition: stopping_condition.into(),
             resume_from_file,
             threads,
             export_history,
@@ -177,7 +158,7 @@ impl NSGA3Arg {
 /// ```rust
 #[doc = include_str!("../../../examples/nsga3_dtlz1.rs")]
 /// ```
-#[as_algorithm(NSGA3Arg)]
+#[algorithm(NSGA3Arg)]
 pub struct NSGA3 {
     /// The vector of reference points
     reference_points: Vec<Vec<f64>>,
@@ -224,7 +205,7 @@ impl NSGA3 {
     /// implementation see [`AdaptiveReferencePoints`].
     ///
     /// returns: `NSGA3`.
-    pub fn new(problem: Problem, options: NSGA3Arg, adaptive: bool) -> Result<Self, OError> {
+    pub fn new(problem: Arc<Problem>, options: NSGA3Arg, adaptive: bool) -> Result<Self, OError> {
         let name = if !adaptive {
             "NSGA3".to_string()
         } else {
@@ -283,7 +264,6 @@ impl NSGA3 {
             );
         }
 
-        let problem = Arc::new(problem);
         let population = if let Some(init_file) = options.resume_from_file {
             info!("Loading initial population from {:?}", init_file);
             NSGA3::seed_population_from_file(
@@ -309,7 +289,7 @@ impl NSGA3 {
 
         info!(
             "{}",
-            NSGA2::algorithm_option_str(&problem, &crossover_options, &mutation_options)
+            algorithm_options_as_str(&problem, &crossover_options, &mutation_options)
         );
 
         Ok(Self {
@@ -389,7 +369,7 @@ impl NSGA3 {
 }
 
 /// Implementation of Section IV of the paper.
-#[impl_algorithm_trait_items(NSGA3Arg)]
+#[algorithm_trait_items(NSGA3Arg)]
 impl Algorithm<NSGA3Arg> for NSGA3 {
     /// This assesses the initial random population.
     ///
@@ -410,7 +390,7 @@ impl Algorithm<NSGA3Arg> for NSGA3 {
 
     /// Evolve the population. The first part of this code comes from NSGA2::evolve(). NSGA3 mainly
     /// differs in the survival method.
-    fn evolve(&mut self) -> Result<(), OError> {
+    fn evolve(&mut self) -> Result<EvolveStatus, OError> {
         // Create the new population, based on the population at the previous time-step, of size
         // self.number_of_individuals. The loop adds two individuals at the time.
         debug!("Generating new population (selection + crossover + mutation)");
@@ -450,7 +430,8 @@ impl Algorithm<NSGA3Arg> for NSGA3 {
         debug!("Evaluation done");
 
         debug!("Calculating fronts and ranks for new population");
-        let sorting_results = fast_non_dominated_sort(self.population.individuals_as_mut(), false)?;
+        let sorting_results =
+            fast_non_dominated_sort(self.population.individuals_as_mut(), false, None)?;
         debug!("Collected {} fronts", sorting_results.fronts.len());
 
         debug!("Selecting best individuals");
@@ -545,7 +526,7 @@ impl Algorithm<NSGA3Arg> for NSGA3 {
         }
 
         self.generation += 1;
-        Ok(())
+        Ok(EvolveStatus::Continue)
     }
 
     fn additional_export_data(&self) -> Option<HashMap<String, DataValue>> {
@@ -577,6 +558,7 @@ crate::algorithms::create_py_reader_interface!(NSGA3Data, NSGA3, NSGA3Arg);
 #[cfg(test)]
 mod test_problems {
     use float_cmp::{approx_eq, assert_approx_eq};
+    use std::sync::Arc;
 
     use nsga_rs_macros::test_with_retries;
 
@@ -652,7 +634,7 @@ mod test_problems {
             seed: Some(1),
         };
 
-        let mut algo = NSGA3::new(problem, args, false).unwrap();
+        let mut algo = NSGA3::new(Arc::new(problem), args, false).unwrap();
         assert_eq!(algo.reference_points().len(), expected_ref_points);
 
         algo.run().unwrap();
@@ -752,7 +734,7 @@ mod test_problems {
             seed: Some(1),
         };
 
-        let mut algo = NSGA3::new(problem, args, false).unwrap();
+        let mut algo = NSGA3::new(Arc::new(problem), args, false).unwrap();
         assert_eq!(algo.reference_points().len(), 91);
 
         algo.run().unwrap();

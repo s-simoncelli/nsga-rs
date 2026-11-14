@@ -1,13 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-#[cfg(feature = "python")]
-use pyo3::prelude::*;
-
 /// The type of stopping condition. Pick one type to inform the algorithm how/when it should
 /// terminate the population evolution.
 #[derive(Serialize, Deserialize, Clone)]
-#[cfg_attr(feature = "python", pyclass(from_py_object))]
 pub enum StoppingCondition {
     /// Set a maximum duration (as number of minutes).
     MaxDurationAsMinutes(u32),
@@ -85,11 +81,44 @@ impl Display for StoppingCondition {
 #[cfg(feature = "python")]
 pub mod py {
     use crate::algorithms::StoppingCondition;
-    use pyo3::prelude::*;
+    use pyo3::{prelude::*, types::PyList, IntoPyObjectExt};
+
+    /// Handle conversion of `StoppingCondition` into Python object for `NSGA*Args` structs.
+    impl<'py> IntoPyObject<'py> for StoppingCondition {
+        type Target = PyAny;
+        type Output = Bound<'py, Self::Target>;
+        type Error = PyErr;
+
+        fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            match self {
+                StoppingCondition::MaxDurationAsMinutes(d) => {
+                    PyStoppingConditionValue::max_duration_as_minutes(d).into_bound_py_any(py)
+                }
+                StoppingCondition::MaxDurationAsHours(d) => {
+                    PyStoppingConditionValue::max_duration_as_hours(d).into_bound_py_any(py)
+                }
+                StoppingCondition::MaxGeneration(g) => {
+                    PyStoppingConditionValue::max_generation(g).into_bound_py_any(py)
+                }
+                StoppingCondition::MaxFunctionEvaluations(nfe) => {
+                    PyStoppingConditionValue::max_function_evaluations(nfe).into_bound_py_any(py)
+                }
+                StoppingCondition::Any(stopping_conditions)
+                | StoppingCondition::All(stopping_conditions) => {
+                    let items = stopping_conditions
+                        .into_iter()
+                        .map(|c| c.into_pyobject(py))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    PyList::new(py, items)?.into_bound_py_any(py)
+                }
+            }
+            // out.into_bound_py_any(py)
+        }
+    }
 
     /// The stopping condition class in Python. Each enum item is a Python function of the
-    /// StoppingConditionValue class. Items are lower-case to be PEP compliant.
-    #[pyclass(name = "StoppingConditionValue", from_py_object)]
+    /// [`StoppingConditionValue`] class. Items are lower-case to be PEP compliant.
+    #[pyclass(name = "StoppingCondition", from_py_object)]
     #[derive(Clone)]
     #[allow(non_camel_case_types)]
     pub enum PyStoppingConditionValue {
@@ -133,6 +162,7 @@ pub mod py {
         }
     }
 
+    /// Allow conversion to [`StoppingCondition`] from Python when an algorithm is initialised
     impl From<PyStoppingConditionValue> for StoppingCondition {
         fn from(cond: PyStoppingConditionValue) -> Self {
             match cond {
@@ -152,58 +182,24 @@ pub mod py {
         }
     }
 
+    /// Python conversion of stopping condition or list of.
     #[derive(FromPyObject)]
-    enum PyStoppingConditionMap {
+    pub enum PyStoppingConditionMap {
         #[pyo3(transparent, annotation = "condition")]
         Condition(PyStoppingConditionValue),
         #[pyo3(transparent, annotation = "list of conditions")]
         Vector(Vec<PyStoppingConditionValue>),
     }
 
-    #[pymethods]
-    impl StoppingCondition {
-        #[new]
-        fn new(condition: PyStoppingConditionMap) -> Self {
-            match condition {
-                PyStoppingConditionMap::Condition(cond) => cond.into(),
-                // handle any only
-                PyStoppingConditionMap::Vector(conds) => {
-                    StoppingCondition::Any(conds.into_iter().map(|c| c.into()).collect())
+    /// Handle initialisation of condition(s) from Python to Rust/
+    impl From<PyStoppingConditionMap> for StoppingCondition {
+        fn from(value: PyStoppingConditionMap) -> Self {
+            match value {
+                PyStoppingConditionMap::Condition(condition) => condition.into(),
+                PyStoppingConditionMap::Vector(conditions) => {
+                    StoppingCondition::Any(conditions.into_iter().map(|c| c.into()).collect())
                 }
             }
-        }
-
-        fn conditions(&self) -> Vec<PyStoppingConditionValue> {
-            match self {
-                StoppingCondition::MaxDurationAsMinutes(d) => {
-                    vec![PyStoppingConditionValue::max_duration_as_minutes(*d)]
-                }
-                StoppingCondition::MaxDurationAsHours(d) => {
-                    vec![PyStoppingConditionValue::max_duration_as_hours(*d)]
-                }
-                StoppingCondition::MaxGeneration(g) => {
-                    vec![PyStoppingConditionValue::max_generation(*g)]
-                }
-                StoppingCondition::MaxFunctionEvaluations(nfe) => {
-                    vec![PyStoppingConditionValue::max_function_evaluations(*nfe)]
-                }
-                StoppingCondition::Any(conds) => {
-                    let mut vec = vec![];
-                    for cond in conds {
-                        vec.extend(cond.conditions());
-                    }
-                    vec
-                }
-                StoppingCondition::All(_) => panic!("Not supported"),
-            }
-        }
-
-        fn __repr__(&self) -> PyResult<String> {
-            Ok(format!("StoppingCondition({})", self.name()))
-        }
-
-        fn __str__(&self) -> String {
-            self.__repr__().unwrap()
         }
     }
 }

@@ -1,3 +1,9 @@
+use crate::operators::{PolynomialMutationArgs, SimulatedBinaryCrossoverArgs};
+use chrono::{DateTime, Utc};
+use log::{debug, info};
+use rayon::{prelude::*, ThreadPool};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::fs::read_dir;
@@ -5,12 +11,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Instant, SystemTime};
 use std::{fmt, fs};
-
-use chrono::{DateTime, Utc};
-use log::{debug, info};
-use rayon::{prelude::*, ThreadPool};
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "python")]
 use crate::algorithms::{NSGA2Arg, NSGA3Arg};
@@ -499,9 +499,9 @@ impl Display for AlgorithmExport {
 pub struct ExportHistory {
     /// Export the algorithm data each time the generation counter in [`Algorithm::generation`]
     /// increases by the provided step.
-    generation_step: usize,
+    pub generation_step: usize,
     /// Serialise the algorithm history and export the results to a JSON file in the given folder.
-    destination: PathBuf,
+    pub destination: PathBuf,
 }
 
 impl ExportHistory {
@@ -554,6 +554,13 @@ impl ExportHistory {
     }
 }
 
+/// An enum returned by [`Algorithm::evolve()`] to indicate whether to continue or stop
+/// evolving the population.
+pub enum EvolveStatus {
+    Continue,
+    Stop,
+}
+
 /// The trait to use to implement an algorithm.
 pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     /// Initialise the algorithm.
@@ -561,15 +568,21 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     /// return: `Result<(), OError>`
     fn initialise(&mut self) -> Result<(), OError>;
 
-    /// Evolve the population.
+    /// Evolve the population. This method returns `EvolveStatus` if the algorithm needs
+    /// to stop the evolution.
     ///
-    /// return: `Result<(), OError>`
-    fn evolve(&mut self) -> Result<(), OError>;
+    /// return: `Result<EvolveStatus, OError>`
+    fn evolve(&mut self) -> Result<EvolveStatus, OError>;
 
     /// Return the current step of the algorithm evolution.
     ///
     /// return: `u32`.
     fn generation(&self) -> u32;
+
+    /// Return the reference to the current step of the algorithm evolution.
+    ///
+    /// return: `&u32`.
+    fn generation_as_ref(&self) -> &u32;
 
     /// Return the number of function evaluations. This is the number of times the algorithm evaluates
     /// an individual's objectives and constraints using [`Algorithm::evaluate_individual`]. If no
@@ -779,8 +792,13 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
 
             // Evolve population
             info!("Generation #{}", self.generation());
+
+            let mut terminate = false;
             let now = SystemTime::now();
-            self.evolve()?;
+            if matches!(self.evolve()?, EvolveStatus::Stop) {
+                terminate = true;
+            }
+
             if let Result::Ok(elapsed) = now.elapsed() {
                 avg_time = (avg_time + elapsed.as_secs_f64()) / 2.0;
             }
@@ -790,38 +808,43 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
                 self.elapsed_as_string()
             );
 
-            // print time left. For vectorial stopping condition this cannot be calculated
-            match self.stopping_condition() {
-                StoppingCondition::MaxDurationAsMinutes(max_t) => {
-                    let left = max_t * 60 - self.start_time().elapsed().as_secs() as u32;
-                    info!("Approximate time left: {}", elapsed_as_string(left as u64));
+            // Termination - skip if early termination is returned by evolve()
+            if !terminate {
+                // print time left. For vectorial stopping condition this cannot be calculated
+                match self.stopping_condition() {
+                    StoppingCondition::MaxDurationAsMinutes(max_t) => {
+                        let left = max_t * 60 - self.start_time().elapsed().as_secs() as u32;
+                        info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                    }
+                    StoppingCondition::MaxDurationAsHours(max_t) => {
+                        let left = max_t * 60 * 24 - self.start_time().elapsed().as_secs() as u32;
+                        info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                    }
+                    StoppingCondition::MaxGeneration(gen) => {
+                        let left = (gen - self.generation()) as f64 * avg_time;
+                        info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                    }
+                    StoppingCondition::MaxFunctionEvaluations(nfe) => {
+                        let left = (nfe - self.number_of_function_evaluations()) as f64 * avg_time
+                            / self.number_of_function_evaluations() as f64;
+                        info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                    }
+                    _ => {}
                 }
-                StoppingCondition::MaxDurationAsHours(max_t) => {
-                    let left = max_t * 60 * 24 - self.start_time().elapsed().as_secs() as u32;
-                    info!("Approximate time left: {}", elapsed_as_string(left as u64));
+
+                let cond = self.stopping_condition();
+                terminate = self.is_stopping_condition_met(cond)?;
+                if terminate {
+                    info!("Stopping evolution because the {} was reached", cond.name());
                 }
-                StoppingCondition::MaxGeneration(gen) => {
-                    let left = (gen - self.generation()) as f64 * avg_time;
-                    info!("Approximate time left: {}", elapsed_as_string(left as u64));
-                }
-                StoppingCondition::MaxFunctionEvaluations(nfe) => {
-                    let left = (nfe - self.number_of_function_evaluations()) as f64 * avg_time
-                        / self.number_of_function_evaluations() as f64;
-                    info!("Approximate time left: {}", elapsed_as_string(left as u64));
-                }
-                _ => {}
             }
 
-            // Termination
-            let cond = self.stopping_condition();
-            let terminate = self.is_stopping_condition_met(cond)?;
             if terminate {
                 // save last file
                 if let Some(export) = self.export_history() {
                     self.save_to_json(&export.destination, Some("Final"))?;
                 }
 
-                info!("Stopping evolution because the {} was reached", cond.name());
                 info!("Took {}", self.elapsed_as_string());
                 break 'gen_loop;
             }
@@ -844,10 +867,10 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     fn is_stopping_condition_met(&self, condition: &StoppingCondition) -> Result<bool, OError> {
         let is_met = match condition {
             StoppingCondition::MaxDurationAsMinutes(duration) => {
-                *duration <= ((Instant::now().elapsed().as_secs() / 60) as u32)
+                *duration <= ((self.start_time().elapsed().as_secs() / 60) as u32)
             }
             StoppingCondition::MaxDurationAsHours(duration) => {
-                *duration <= ((Instant::now().elapsed().as_secs() / 60 / 60) as u32)
+                *duration <= ((self.start_time().elapsed().as_secs() / 60 / 60) as u32)
             }
             StoppingCondition::MaxGeneration(generation) => *generation <= self.generation(),
             StoppingCondition::MaxFunctionEvaluations(nfe) => {
@@ -909,8 +932,12 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     /// * `destination`: The path to the JSON file.
     /// * `file_prefix`: A prefix to prepend at the beginning of the file name. Empty when `None`.
     ///
-    /// return `Result<(), OError>`
-    fn save_to_json(&self, destination: &PathBuf, file_prefix: Option<&str>) -> Result<(), OError> {
+    /// return `Result<PathBuf, OError>`
+    fn save_to_json(
+        &self,
+        destination: &PathBuf,
+        file_prefix: Option<&str>,
+    ) -> Result<PathBuf, OError> {
         let file_prefix = file_prefix.unwrap_or("History");
 
         let [hours, minutes, seconds] = self.elapsed();
@@ -945,12 +972,12 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
         ));
 
         info!("Saving JSON file {:?}", file);
-        fs::write(file, data).map_err(|e| {
+        fs::write(&file, data).map_err(|e| {
             OError::AlgorithmExport(format!(
                 "The following error occurred while exporting the history JSON file: {e}",
             ))
         })?;
-        Ok(())
+        Ok(file)
     }
 
     /// Read the results previously exported with [`Self::save_to_json`].
@@ -1090,9 +1117,7 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
 /// # define the NSGA2 options
 /// args = NSGA2Arg(
 ///     number_of_individuals=10,
-///     stopping_condition=StoppingCondition(
-///         condition=StoppingConditionValue.max_duration(3)
-///     )
+///     stopping_condition=StoppingCondition.max_duration(3)
 /// )
 ///
 /// # initialise the enum
@@ -1280,6 +1305,45 @@ macro_rules! create_py_reader_interface {
 #[cfg(feature = "python")]
 pub(crate) use create_py_reader_interface;
 
+/// Get a string listing the algorithm options.
+///
+/// # Arguments
+///
+/// * `problem`: The problem.
+/// * `crossover_options`: The crossover operator options.
+/// * `mutation_options`: The mutation operator options.
+///
+/// returns: `String`
+pub fn algorithm_options_as_str(
+    problem: &Arc<Problem>,
+    crossover_options: &SimulatedBinaryCrossoverArgs,
+    mutation_options: &PolynomialMutationArgs,
+) -> String {
+    let mut log_opts: String = "Algorithm options are:\n".to_owned();
+    log_opts.push_str(
+            format!("\t* Number of variables {:>13}\n\t* Number of objectives {:>12}\n\t* Number of constraints {:>11}\n",
+                    problem.number_of_variables(),
+                    problem.number_of_objectives(),
+                    problem.number_of_constraints()
+            ).as_str()
+        );
+    log_opts.push_str(
+            format!(
+                "\t* Crossover distribution index {:>5}\n\t* Crossover probability {:>11}\n\t* Crossover var probability {:>9}\n",
+                crossover_options.distribution_index, crossover_options.crossover_probability, crossover_options.variable_probability,
+            )
+                .as_str(),
+        );
+    log_opts.push_str(
+        format!(
+            "\t* Mutation index parameter {:>9}\n\t* Mutation var probability {:>10}",
+            mutation_options.index_parameter, mutation_options.variable_probability,
+        )
+        .as_str(),
+    );
+    log_opts
+}
+
 // Custom Py object conversion
 #[cfg(feature = "python")]
 pub mod py {
@@ -1409,7 +1473,7 @@ mod test {
             resume_from_file: None,
             seed: Some(10),
         };
-        let mut algo = NSGA2::new(problem, args).unwrap();
+        let mut algo = NSGA2::new(Arc::new(problem), args).unwrap();
         algo.run().unwrap();
         let results = algo.get_results();
 
@@ -1430,7 +1494,7 @@ mod test {
             resume_from_file: None,
             seed: Some(10),
         };
-        let mut algo = NSGA2::new(problem, args).unwrap();
+        let mut algo = NSGA2::new(Arc::new(problem), args).unwrap();
         algo.run().unwrap();
         let results = algo.get_results();
 
@@ -1455,7 +1519,7 @@ mod test {
             resume_from_file: None,
             seed: Some(10),
         };
-        let mut algo = NSGA2::new(problem, args).unwrap();
+        let mut algo = NSGA2::new(Arc::new(problem), args).unwrap();
         algo.run().unwrap();
         let results = algo.get_results();
 

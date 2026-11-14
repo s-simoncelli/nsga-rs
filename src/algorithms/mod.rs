@@ -1,7 +1,11 @@
 pub use a_nsga3::AdaptiveNSGA3;
 pub use algorithm::{
-    Algorithm, AlgorithmExport, AlgorithmSerialisedExport, ExportHistory, ExportVecGroupBy,
-    NumThreads,
+    algorithm_options_as_str, Algorithm, AlgorithmExport, AlgorithmSerialisedExport, EvolveStatus,
+    ExportHistory, ExportVecGroupBy, NumThreads,
+};
+pub use eps_nsga2::{
+    EpsNSGA2, EpsNSGA2Arg, InterRunStoppingCondition, IntraRunStoppingCondition,
+    DISTANCE_FROM_BOX_CORNER, IDENTIFICATION_ARRAY_KEY, SCALED_OBJECTIVE_KEY,
 };
 pub use nsga2::{NSGA2Arg, CROWDING_DIST_KEY, NSGA2};
 pub use nsga3::{NSGA3Arg, Nsga3NumberOfIndividuals, NSGA3};
@@ -18,10 +22,11 @@ pub use nsga2::NSGA2Data;
 #[cfg(feature = "python")]
 pub use nsga3::NSGA3Data;
 #[cfg(feature = "python")]
-pub use stopping_condition::py::PyStoppingConditionValue;
+pub use stopping_condition::py::{PyStoppingConditionMap, PyStoppingConditionValue};
 
 mod a_nsga3;
 mod algorithm;
+mod eps_nsga2;
 mod nsga2;
 mod nsga3;
 mod stopping_condition;

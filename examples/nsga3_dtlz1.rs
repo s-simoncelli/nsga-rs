@@ -1,6 +1,7 @@
 use std::env;
 use std::error::Error;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use gnuplot::PlotOption::{Caption, Color, PointSize, PointSymbol};
 use gnuplot::{AxesCommon, Figure};
@@ -21,7 +22,7 @@ use nsga_rs::utils::{DasDarren1998, NumberOfPartitions};
 ///
 /// Make sure to compile this in release mode to speed up the calculation:
 ///
-/// `cargo run --example nsga3_dtlz1 -p nsga_rs --feature plotting --release`
+/// `cargo run --example nsga3_dtlz1 -p nsga_rs --release`
 fn main() -> Result<(), Box<dyn Error>> {
     // Add log
     env_logger::builder().filter_level(LevelFilter::Info).init();
@@ -68,7 +69,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     // Initialise the algorithm
-    let mut algo = NSGA3::new(problem, args, false).unwrap();
+    let mut algo = NSGA3::new(Arc::new(problem), args, false).unwrap();
 
     // Run the algorithm
     algo.run()?;
@@ -78,10 +79,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         .join("examples")
         .join("results");
 
-    algo.save_to_json(&destination, Some("DTLZ1_3obj"))?;
+    let data_file = algo.save_to_json(&destination, Some("DTLZ1_3obj"))?;
 
     // Plot the Pareto front using the exported data at the last generation
-    let serialised_data = NSGA3::read_json_file(&destination.join("DTLZ1_3obj_NSGA3_gen400.json"))?;
+    let serialised_data = NSGA3::read_json_file(&data_file)?;
     serialised_data.plot_front(
         &destination.join("DTLZ1_3obj_NSGA3_gen400_Pareto_front.png"),
         None,

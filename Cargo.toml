@@ -37,7 +37,7 @@ thiserror = "2.0.11"
 rayon = "1.10.0"
 env_logger = "0.11.3"
 chrono = { version = "0.4.38", features = ["serde"] }
-nsga-rs-macros = { path = "libs/nsga-rs-macros", version = "1.1.1" }
+nsga-rs-macros = { path = "libs/nsga-rs-macros", version = "1.2.1" }
 hv-fonseca-et-al-2006-sys = { path = "libs/hv-fonseca-et-al-2006-sys", version = "2.0.2-rc.2" }
 nalgebra = "0.33.0"
 pyo3 = { version = ">=0.28.0", optional = true, features = [] }
@@ -51,7 +51,7 @@ float-cmp = "0.10.0"
 default = ["plotting"]
 plotting = ["gnuplot"]
 python = ["dep:pyo3", "dep:pyo3-build-config", "pyo3/chrono"]
-# Enable pyo3 support when creating a Python module that wraps this library with an 
+# Enable pyo3 support when creating a Python module that wraps this library with an
 # optimisation problem
 python-module = ["python", "pyo3/extension-module"]
 # feature used only to test python function
@@ -65,3 +65,15 @@ rustdoc-args = ["--html-in-header", "src/katex-header.html"]
 # Run test with optimisation to speed up tests solving optimisation problems.
 [profile.test]
 opt-level = 3
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+unreachable = "warn"
+dbg_macro = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
