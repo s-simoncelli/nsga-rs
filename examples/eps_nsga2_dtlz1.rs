@@ -3,13 +3,9 @@ use std::error::Error;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use gnuplot::PlotOption::{Caption, Color, LineWidth, PointSymbol};
-use gnuplot::{AutoOption, AxesCommon, Figure};
 use log::LevelFilter;
 
-use nsga_rs::algorithms::{
-    Algorithm, AlgorithmExport, EpsNSGA2, EpsNSGA2Arg, NumThreads, StoppingCondition,
-};
+use nsga_rs::algorithms::{Algorithm, EpsNSGA2, EpsNSGA2Arg, NumThreads, StoppingCondition};
 use nsga_rs::core::builtin_problems::DTLZ1Problem;
 
 /// Solve the DTLZ1 problem from Deb et al. (2013) with 3 objectives. This is a problem where the
@@ -73,61 +69,5 @@ fn main() -> Result<(), Box<dyn Error>> {
     let serialised_data = EpsNSGA2::read_json_file(&data_file)?;
     serialised_data.plot_front(&out_path.join("DTLZ1_3obj_EpsNSGA2_Pareto_front.png"), None)?;
 
-    // Plot the solution chart DTLZ1_3obj_EpsNSGA2_solutions.png
-    let export_data: AlgorithmExport = serialised_data.try_into()?;
-
-    let x = (-60..=60).map(|v| v as f64 / 10.0).collect::<Vec<_>>();
-    let f1: Vec<f64> = x.iter().map(|v| v.powi(2)).collect();
-    let f2: Vec<f64> = x.iter().map(|v| (v - 2.0).powi(2)).collect();
-
-    let mut fg = Figure::new();
-    let ax = fg.axes2d();
-
-    // theoretical curves
-    ax.lines(
-        &x,
-        &f1,
-        &[
-            Color("blue".into()),
-            Caption("Objective f_1"),
-            LineWidth(2.0),
-        ],
-    );
-    ax.lines(
-        &x,
-        f2,
-        &[
-            Color("green".into()),
-            Caption("Objective f_2"),
-            LineWidth(2.0),
-        ],
-    );
-
-    // data from algorithm
-    let var = export_data.get_real_variables("x")?;
-    let calc_f1 = export_data.get_objective("x^2")?;
-    let calc_f2 = export_data.get_objective("(x-2)^2")?;
-    ax.points(
-        &var,
-        calc_f1,
-        &[Color("red".into()), PointSymbol('O'), Caption("Solution")],
-    );
-    ax.points(&var, calc_f2, &[Color("red".into()), PointSymbol('O')]);
-
-    ax.set_x_label("x", &[])
-        .set_y_label("Objective", &[])
-        .set_x_grid(true)
-        .set_x_range(AutoOption::Fix(-3.0), AutoOption::Fix(5.0))
-        .set_y_grid(true)
-        .set_y_range(AutoOption::Fix(0.0), AutoOption::Fix(20.0))
-        .set_title("DTLZ1 problem solved with Eps-NSGA2", &[]);
-    fg.save_to_png(
-        &data_file
-            .parent()
-            .unwrap()
-            .join("DTLZ1_2obj_EpsNSGA2_solutions.png"),
-        600,
-        500,
-    )?;
     Ok(())
 }
