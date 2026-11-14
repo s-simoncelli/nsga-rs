@@ -865,10 +865,10 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     fn is_stopping_condition_met(&self, condition: &StoppingCondition) -> Result<bool, OError> {
         let is_met = match condition {
             StoppingCondition::MaxDurationAsMinutes(duration) => {
-                *duration <= ((Instant::now().elapsed().as_secs() / 60) as u32)
+                *duration <= ((self.start_time().elapsed().as_secs() / 60) as u32)
             }
             StoppingCondition::MaxDurationAsHours(duration) => {
-                *duration <= ((Instant::now().elapsed().as_secs() / 60 / 60) as u32)
+                *duration <= ((self.start_time().elapsed().as_secs() / 60 / 60) as u32)
             }
             StoppingCondition::MaxGeneration(generation) => *generation <= self.generation(),
             StoppingCondition::MaxFunctionEvaluations(nfe) => {
