@@ -3,7 +3,7 @@ pub use algorithm::{
     algorithm_options_as_str, Algorithm, AlgorithmExport, AlgorithmSerialisedExport, EvolveStatus,
     ExportHistory, ExportVecGroupBy, NumThreads,
 };
-pub use esp_nsga2::{
+pub use eps_nsga2::{
     EpsNSGA2, EpsNSGA2Arg, InterRunStoppingCondition, IntraRunStoppingCondition,
     DISTANCE_FROM_BOX_CORNER, IDENTIFICATION_ARRAY_KEY, SCALED_OBJECTIVE_KEY,
 };
@@ -26,7 +26,7 @@ pub use stopping_condition::py::{PyStoppingConditionMap, PyStoppingConditionValu
 
 mod a_nsga3;
 mod algorithm;
-mod esp_nsga2;
+mod eps_nsga2;
 mod nsga2;
 mod nsga3;
 mod stopping_condition;

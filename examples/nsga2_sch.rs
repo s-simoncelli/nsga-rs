@@ -52,10 +52,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let out_path = PathBuf::from(&env::current_dir().unwrap())
         .join("examples")
         .join("results");
-    algo.save_to_json(&out_path, Some("SCH_2obj"))?;
+    let data_file = algo.save_to_json(&out_path, Some("SCH_2obj"))?;
 
     // Plot the Pareto front using the exported data at the last generation
-    let data_file = out_path.join("SCH_2obj_NSGA2_gen250.json");
     let serialised_data = NSGA2::read_json_file(&data_file)?;
     serialised_data.plot_front(&out_path.join("SCH_2obj_NSGA2_Pareto_front.png"), None)?;
 

@@ -79,10 +79,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         .join("examples")
         .join("results");
 
-    algo.save_to_json(&destination, Some("DTLZ1_3obj"))?;
+    let data_file = algo.save_to_json(&destination, Some("DTLZ1_3obj"))?;
 
     // Plot the Pareto front using the exported data at the last generation
-    let serialised_data = NSGA3::read_json_file(&destination.join("DTLZ1_3obj_NSGA3_gen400.json"))?;
+    let serialised_data = NSGA3::read_json_file(&data_file)?;
     serialised_data.plot_front(
         &destination.join("DTLZ1_3obj_NSGA3_gen400_Pareto_front.png"),
         None,

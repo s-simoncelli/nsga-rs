@@ -834,7 +834,9 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
 
                 let cond = self.stopping_condition();
                 terminate = self.is_stopping_condition_met(cond)?;
-                info!("Stopping evolution because the {} was reached", cond.name());
+                if terminate {
+                    info!("Stopping evolution because the {} was reached", cond.name());
+                }
             }
 
             if terminate {
@@ -930,8 +932,12 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     /// * `destination`: The path to the JSON file.
     /// * `file_prefix`: A prefix to prepend at the beginning of the file name. Empty when `None`.
     ///
-    /// return `Result<(), OError>`
-    fn save_to_json(&self, destination: &PathBuf, file_prefix: Option<&str>) -> Result<(), OError> {
+    /// return `Result<PathBuf, OError>`
+    fn save_to_json(
+        &self,
+        destination: &PathBuf,
+        file_prefix: Option<&str>,
+    ) -> Result<PathBuf, OError> {
         let file_prefix = file_prefix.unwrap_or("History");
 
         let [hours, minutes, seconds] = self.elapsed();
@@ -966,12 +972,12 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
         ));
 
         info!("Saving JSON file {:?}", file);
-        fs::write(file, data).map_err(|e| {
+        fs::write(&file, data).map_err(|e| {
             OError::AlgorithmExport(format!(
                 "The following error occurred while exporting the history JSON file: {e}",
             ))
         })?;
-        Ok(())
+        Ok(file)
     }
 
     /// Read the results previously exported with [`Self::save_to_json`].
