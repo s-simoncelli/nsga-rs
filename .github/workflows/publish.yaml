@@ -61,7 +61,7 @@ jobs:
 
       - name: Update Cargo.toml
         if: steps.release.outputs.publish == 'true'
-        run: cargo set-version "${{ steps.bump.outputs.version }}"
+        run: cargo set-version --package nsga_rs "${{ steps.bump.outputs.version }}"
 
       - name: Regenerate Cargo.lock
         if: steps.release.outputs.publish == 'true'
@@ -80,10 +80,10 @@ jobs:
           git commit -m "chore(release): v${{ steps.bump.outputs.version }}"
           git tag "${{ steps.bump.outputs.version }}"
           git push origin HEAD:main
-          git push origin "v${{ steps.bump.outputs.version }}"
+          git push origin "${{ steps.bump.outputs.version }}"
 
       - name: Publish crate
-        if: steps.release.outputs.created == 'true'
+        if: steps.release.outputs.publish == 'true'
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
         run: |
