@@ -1,5 +1,3 @@
-#[cfg(feature = "python")]
-use crate::algorithms::PyStoppingConditionValue;
 use crate::algorithms::{
     Algorithm, EvolveStatus, ExportHistory, NSGA2Arg, StoppingCondition, NSGA2,
 };
@@ -15,8 +13,6 @@ pub use data::{
 };
 use log::{debug, info, LevelFilter};
 use nsga_rs_macros::{algorithm, algorithm_trait_items};
-#[cfg(feature = "python")]
-use pyo3::prelude::*;
 use rayon::ThreadPool;
 use std::fmt::{Display, Formatter};
 use std::mem;
