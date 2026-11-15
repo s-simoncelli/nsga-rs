@@ -140,13 +140,6 @@ impl<'a> Niching<'a> {
 
             // step 6 - select points from front F_l
             if !i_j.is_empty() {
-                // let (_, ind) = argmin_by(&i_j, |(_, ind)| {
-                //     ind.get_data(MIN_DISTANCE).unwrap().as_real().unwrap()
-                // })
-                // .unwrap();
-                // let new_ind_index = index_of(self.potential_individuals, ind);
-                // let method = "min_distance";
-
                 let (new_ind_index, method) = if min_rho_j == 0 {
                     // step 7 - no point from P_{t+1} is associated with the selected reference point
                     // j_hat. There's at least one point from F_l that can be linked (I_j is not empty)
