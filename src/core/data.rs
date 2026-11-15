@@ -9,17 +9,19 @@ use std::collections::HashMap;
 /// The data type and value that can be stored in an individual or algorithm..
 #[derive(Clone, Deserialize, Debug)]
 #[serde(untagged)]
+// Integer types must come before the real ones. A saved usize is read back as `Integer`
+// (see `as_usize`).
 pub enum DataValue {
-    /// The value for a floating-point number. This is a f64.
-    Real(f64),
     /// The value for an integer number. This is an i64.
     Integer(i64),
+    /// The value for a floating-point number. This is a f64.
+    Real(f64),
     /// The value for an usize.
     USize(usize),
-    /// The value for a vector of floating-point numbers.
-    Vector(Vec<f64>),
     /// The value for a vector of integer `i64` numbers.
     IntVector(Vec<i64>),
+    /// The value for a vector of floating-point numbers.
+    Vector(Vec<f64>),
     /// The value for a vector of nested data.
     DataVector(Vec<DataValue>),
     /// The value for a Hashmap
@@ -127,14 +129,16 @@ impl DataValue {
     }
 
     /// Get the value if the data is of usize type. This returns an error if the data is not an
-    /// usize.
+    /// usize. A non-negative integer is accepted too; a usize loaded from JSON is an integer.
     ///
-    /// returns: `Result<f64, OError>`
+    /// returns: `Result<usize, OError>`
     pub fn as_usize(&self) -> Result<usize, OError> {
-        if let DataValue::USize(v) = self {
-            Ok(*v)
-        } else {
-            Err(OError::WrongDataType("usize".to_string()))
+        match self {
+            DataValue::USize(v) => Ok(*v),
+            DataValue::Integer(v) => {
+                usize::try_from(*v).map_err(|_| OError::WrongDataType("usize".to_string()))
+            }
+            _ => Err(OError::WrongDataType("usize".to_string())),
         }
     }
 }
