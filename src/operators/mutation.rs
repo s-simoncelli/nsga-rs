@@ -117,7 +117,7 @@ impl PolynomialMutationArgs {
 ///         VariableType::Real(BoundedNumber::new("var1", 0.0, 1000.0)?),
 ///         VariableType::Integer(BoundedNumber::new("var2", -1, 1)?)
 ///     ];
-///     
+///
 ///     // dummy evaluator function
 ///     #[derive(Debug)]
 ///     struct UserEvaluator;
@@ -229,7 +229,7 @@ impl Mutation for PolynomialMutation {
             .iter()
             .all(|(_, v)| v.is_real() | v.is_integer())
         {
-            return Err(OError::CrossoverOperator(
+            return Err(OError::MutationOperator(
                 "PolynomialMutation".to_string(),
                 "The PM operator only works with real or integer variables".to_string(),
             ));
