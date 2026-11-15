@@ -1,12 +1,7 @@
-use std::mem;
-
-use log::{debug, warn};
-
 use hv_fonseca_et_al_2006_sys::calculate_hv;
 
-use crate::core::{Individual, Individuals, OError};
-use crate::metrics::hypervolume::{check_args, check_ref_point_coordinate};
-use crate::utils::fast_non_dominated_sort;
+use crate::core::{Individual, OError};
+use crate::metrics::hypervolume::prepare_front;
 
 /// Calculate the hyper-volume using the algorithm proposed by [Fonseca et al. (2006)](http://dx.doi.org/10.1109/CEC.2006.1688440)
 /// for a problem with `d` objectives and `n` individuals. The function calls version 4 of the
@@ -40,59 +35,18 @@ impl HyperVolumeFonseca2006 {
     ///
     /// returns: `Result<HyperVolumeFonseca2006, OError>`
     pub fn new(individuals: &mut [Individual], reference_point: &[f64]) -> Result<Self, OError> {
-        let metric_name = "Hyper-volume Fonseca et al. (2006)".to_string();
-        // check sizes
-        check_args(individuals, reference_point)
-            .map_err(|e| OError::Metric(metric_name.clone(), e))?;
-
+        let metric_name = "Hyper-volume Fonseca et al. (2006)";
         if reference_point.len() != 3 {
             return Err(OError::Metric(
-                metric_name,
+                metric_name.to_string(),
                 "This can only be used on a 3-objective problem.".to_string(),
             ));
         }
-
-        // the reference point must not dominate any objectives
-        let problem = individuals[0].problem();
-        for (obj_idx, (obj_name, obj)) in problem.objectives().iter().enumerate() {
-            check_ref_point_coordinate(
-                &individuals.objective_values(obj_name)?,
-                obj,
-                reference_point[obj_idx],
-                obj_idx + 1,
-            )
-            .map_err(|e| OError::Metric(metric_name.clone(), e))?;
-        }
-
-        // get non-dominated front with feasible solutions only
-        let num_individuals = individuals.len();
-        let mut front_data = fast_non_dominated_sort(individuals, true, None)?;
-        let individuals = mem::take(&mut front_data.fronts[0]);
-
-        if num_individuals != individuals.len() {
-            warn!("{} individuals were removed from the given data because they are dominated by all the other points", num_individuals - individuals.len());
-        }
-
-        // Collect objective values - invert the sign of minimised objectives
-        let objective_values = individuals
-            .iter()
-            .map(|ind| ind.get_objective_values())
-            .collect::<Result<Vec<Vec<f64>>, _>>()?;
-
-        // flip sign of maximised coordinates for the reference point
-        let mut ref_point = reference_point.to_vec();
-        for (obj_idx, obj_name) in problem.objective_names().iter().enumerate() {
-            if !problem.is_objective_minimised(obj_name)? {
-                ref_point[obj_idx] *= -1.0;
-            }
-        }
-
-        debug!("Using non-dominated front {:?}", objective_values);
-        debug!("Reference point is {:?}", ref_point);
-
+        let (individuals, reference_point) =
+            prepare_front(individuals, reference_point, metric_name)?;
         Ok(Self {
-            individuals: objective_values,
-            reference_point: ref_point,
+            individuals,
+            reference_point,
         })
     }
 
