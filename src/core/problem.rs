@@ -100,9 +100,20 @@ impl TryInto<Problem> for ProblemExport {
     type Error = OError;
 
     fn try_into(self) -> Result<Problem, Self::Error> {
-        let objectives = self.objectives.values().cloned().collect();
-        let variables = self.variables.values().cloned().collect();
-        let constraints = self.constraints.values().cloned().collect();
+        // rebuild in the saved order: the HashMap order is random
+        fn ordered<T: Clone>(names: &[String], map: &HashMap<String, T>) -> Result<Vec<T>, OError> {
+            names
+                .iter()
+                .map(|n| {
+                    map.get(n).cloned().ok_or_else(|| {
+                        OError::Generic(format!("'{n}' is missing in the exported problem"))
+                    })
+                })
+                .collect()
+        }
+        let objectives = ordered(&self.objective_names, &self.objectives)?;
+        let variables = ordered(&self.variable_names, &self.variables)?;
+        let constraints = ordered(&self.constraint_names, &self.constraints)?;
 
         Problem::new(objectives, variables, Some(constraints), dummy_evaluator())
     }
@@ -347,6 +358,11 @@ impl Problem {
             .iter()
             .map(|o| (o.name().clone(), o.clone()))
             .collect()
+    }
+
+    /// Get the constraints without copying them.
+    pub(crate) fn constraint_slice(&self) -> &[Constraint] {
+        &self.constraints
     }
 
     /// Get the list of constraints.
@@ -1289,5 +1305,37 @@ mod test {
             1.0,
             epsilon = 0.00001
         );
+    }
+
+    #[test]
+    /// A problem and an individual saved to JSON must come back with the same objective order and
+    /// with integer variables.
+    fn test_json_round_trip() {
+        let objectives = (1..=4)
+            .map(|i| Objective::new(&format!("f{i}"), ObjectiveDirection::Minimise))
+            .collect();
+        let variables = vec![
+            VariableType::Real(BoundedNumber::new("x", 0.0, 1.0).unwrap()),
+            VariableType::Integer(BoundedNumber::new("i", 0, 5).unwrap()),
+        ];
+        let problem = Arc::new(Problem::new(objectives, variables, None, dummy_evaluator()).unwrap());
+        let mut ind = Individual::new(problem.clone());
+        ind.update_variable("i", VariableValue::Integer(3)).unwrap();
+        for name in problem.objective_names() {
+            ind.update_objective(&name, 1.0).unwrap();
+        }
+
+        let json = serde_json::to_string(&problem.serialise()).unwrap();
+        let export: super::ProblemExport = serde_json::from_str(&json).unwrap();
+        let loaded: Problem = export.try_into().unwrap();
+        assert_eq!(loaded.objective_names(), problem.objective_names());
+        assert_eq!(loaded.variable_names(), problem.variable_names());
+        assert_eq!(loaded.get_variable("i").unwrap().label(), "integer");
+
+        let json = serde_json::to_string(&ind.serialise()).unwrap();
+        let data: crate::core::IndividualExport = serde_json::from_str(&json).unwrap();
+        let loaded_ind = Individual::deserialise(&data, problem).unwrap();
+        assert_eq!(loaded_ind.get_integer_value("i").unwrap(), 3);
+        assert!(loaded_ind.get_real_value("x").is_ok());
     }
 }
