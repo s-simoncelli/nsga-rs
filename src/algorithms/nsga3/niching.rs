@@ -104,7 +104,7 @@ impl<'a> Niching<'a> {
             debug!("min_rho_j = {min_rho_j}");
 
             // step 3 - collect all reference point indexes j with minimum rho_j
-            let j_min_set: Vec<usize> = self
+            let mut j_min_set: Vec<usize> = self
                 .rho_j
                 .iter()
                 .filter_map(|(ref_index, ref_counter)| {
@@ -115,6 +115,8 @@ impl<'a> Niching<'a> {
                     }
                 })
                 .collect();
+            // HashMap order changes between runs: sort so a seeded rng picks the same point
+            j_min_set.sort_unstable();
 
             // step 4 - get reference point with minimum association counter
             let j_hat = match j_min_set.len() {
