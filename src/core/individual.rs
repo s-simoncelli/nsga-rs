@@ -426,6 +426,9 @@ impl Individual {
         for (const_name, const_value) in data.constraint_values.iter() {
             ind.update_constraint(const_name, *const_value)?;
         }
+        for (name, value) in data.data.iter() {
+            ind.set_data(name, value.clone());
+        }
         ind.set_evaluated();
         Ok(ind)
     }
@@ -460,9 +463,9 @@ impl Individual {
     /// return: `f64`
     pub fn constraint_violation(&self) -> f64 {
         self.problem
-            .constraints()
+            .constraint_slice()
             .iter()
-            .map(|(name, c)| c.constraint_violation(self.constraint_values[name]))
+            .map(|c| c.constraint_violation(self.constraint_values[c.name_str()]))
             .sum()
     }
 
@@ -470,20 +473,11 @@ impl Individual {
     ///
     /// return: `bool`
     pub fn is_feasible(&self) -> bool {
-        for (name, constraint_value) in self.constraint_values.iter() {
-            if !self.problem.constraint_names().contains(name) {
-                continue;
-            }
-            if !self
-                .problem
-                .get_constraint(name)
-                .unwrap()
-                .is_met(*constraint_value)
-            {
-                return false;
-            }
-        }
-        true
+        self.problem.constraint_slice().iter().all(|c| {
+            self.constraint_values
+                .get(c.name_str())
+                .is_some_and(|v| c.is_met(*v))
+        })
     }
 
     /// Ge all the variables.
