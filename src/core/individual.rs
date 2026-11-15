@@ -1,3 +1,4 @@
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -148,9 +149,22 @@ impl Individual {
     ///
     /// returns: `Individual`
     pub fn new(problem: Arc<Problem>) -> Self {
+        Self::new_random(problem, &mut rand::rng())
+    }
+
+    /// Create a new individual whose variables are drawn from the given random number
+    /// generator. Use this to make the variable values reproducible with a seeded `rng`.
+    ///
+    /// # Arguments
+    ///
+    /// * `problem`: The problem being solved.
+    /// * `rng`: The random number generator.
+    ///
+    /// returns: `Individual`
+    pub fn new_random(problem: Arc<Problem>, rng: &mut dyn RngCore) -> Self {
         let mut variable_values: HashMap<String, VariableValue> = HashMap::new();
         for (variable_name, var_type) in problem.variables() {
-            variable_values.insert(variable_name, var_type.generate_random_value());
+            variable_values.insert(variable_name, var_type.generate_random_value(rng));
         }
 
         let mut objective_values: HashMap<String, f64> = HashMap::new();
@@ -681,9 +695,14 @@ impl Population {
     ///
     /// * `problem`: The problem being solved.
     /// * `number_of_individuals`: The number of individuals to add to the population.
+    /// * `rng`: The random number generator used to draw the variable values.
     ///
     /// returns: `Result<Population, OError>`
-    pub fn init(problem: Arc<Problem>, number_of_individuals: usize) -> Result<Self, OError> {
+    pub fn init(
+        problem: Arc<Problem>,
+        number_of_individuals: usize,
+        rng: &mut dyn RngCore,
+    ) -> Result<Self, OError> {
         if number_of_individuals == 0 {
             return Err(OError::Generic(
                 "The number of individuals must be larger than 0".to_string(),
@@ -691,7 +710,7 @@ impl Population {
         }
         let mut population: Vec<Individual> = vec![];
         for _ in 0..number_of_individuals {
-            population.push(Individual::new(problem.clone()));
+            population.push(Individual::new_random(problem.clone(), rng));
         }
         Ok(Self(population))
     }
