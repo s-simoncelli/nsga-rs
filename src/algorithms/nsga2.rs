@@ -8,7 +8,9 @@ use std::path::PathBuf;
 
 #[cfg(feature = "python")]
 use crate::algorithms::PyStoppingConditionMap;
-use crate::algorithms::{algorithm_options_as_str, Algorithm, EvolveStatus, NumThreads};
+use crate::algorithms::{
+    algorithm_options_as_str, ensure_numeric_variables, Algorithm, EvolveStatus, NumThreads,
+};
 use crate::core::utils::get_rng;
 use crate::core::{DataValue, Individual, Individuals, IndividualsMut, OError};
 use crate::operators::{
@@ -117,6 +119,7 @@ impl<'a> NSGA2<'a> {
     /// returns: `NSGA2`.
     pub fn new(problem: Arc<Problem>, options: NSGA2Arg) -> Result<Self, OError> {
         let name = "NSGA2".to_string();
+        ensure_numeric_variables(&problem, &name)?;
         if options.number_of_individuals < 3 {
             return Err(OError::AlgorithmInit(
                 name,
@@ -133,6 +136,7 @@ impl<'a> NSGA2<'a> {
         }
 
         let nsga2_args = options.clone();
+        let mut rng = get_rng(options.seed);
         let population = if let Some(init_file) = options.resume_from_file {
             info!("Loading initial population from {:?}", init_file);
             NSGA2::seed_population_from_file(
@@ -143,7 +147,7 @@ impl<'a> NSGA2<'a> {
             )?
         } else {
             info!("Created initial random population");
-            Population::init(problem.clone(), options.number_of_individuals)?
+            Population::init(problem.clone(), options.number_of_individuals, &mut rng)?
         };
 
         let mutation_options = match options.mutation_operator_options {
@@ -173,7 +177,7 @@ impl<'a> NSGA2<'a> {
             start_time: Instant::now(),
             thread_pool: Self::build_thread_pool(options.threads)?,
             export_history: options.export_history,
-            rng: get_rng(options.seed),
+            rng,
             args: nsga2_args,
             after_evolve: None,
         })
@@ -217,13 +221,10 @@ impl<'a> NSGA2<'a> {
             let mut obj_values = individuals.objective_values(&obj_name)?;
             let delta_range = vector_max(&obj_values)? - vector_min(&obj_values)?;
 
-            // set all to infinite if distance is too small
+            // a flat objective cannot tell individuals apart: skip it
             if delta_range.abs() < f64::EPSILON {
-                for individual in &mut *individuals {
-                    individual.set_data(CROWDING_DIST_KEY, inf.clone());
-                }
-                debug!("Setting crowding distance to Inf for all individuals. The min/max range is too small");
-                return Ok(());
+                debug!("Skipping objective '{obj_name}' for crowding distance. The min/max range is too small");
+                continue;
             }
 
             // sort objectives and get indexes to map individuals to sorted objectives
@@ -256,6 +257,24 @@ impl<'a> NSGA2<'a> {
         }
 
         Ok(())
+    }
+
+    /// Rank the individuals with the fast non-dominated sort and set the crowding distance on
+    /// each front. This returns the ranked individuals as a new population.
+    ///
+    /// # Arguments
+    ///
+    /// * `population`: The evaluated population.
+    ///
+    /// returns: `Result<Population, OError>`
+    pub(crate) fn rank_and_crowd(population: &mut Population) -> Result<Population, OError> {
+        let fronts = fast_non_dominated_sort(population.individuals_as_mut(), false, None)?.fronts;
+        let mut ranked = Population::new();
+        for mut front in fronts {
+            NSGA2::set_crowding_distance(&mut front)?;
+            ranked.add_new_individuals(front);
+        }
+        Ok(ranked)
     }
 
     /// Set a custom population before the algorithm starts. This overwrites any population
@@ -297,11 +316,8 @@ impl<'a> Algorithm<NSGA2Arg> for NSGA2<'a> {
             &self.thread_pool,
         )?;
 
-        debug!("Calculating rank");
-        fast_non_dominated_sort(self.population.individuals_as_mut(), false, None)?;
-
-        debug!("Calculating crowding distance");
-        NSGA2::set_crowding_distance(self.population.individuals_as_mut())?;
+        debug!("Calculating rank and crowding distance");
+        self.population = NSGA2::rank_and_crowd(&mut self.population)?;
 
         info!("Initial evaluation completed");
         self.generation += 1;
@@ -364,9 +380,10 @@ impl<'a> Algorithm<NSGA2Arg> for NSGA2<'a> {
         //
         // This implements the algorithm at the bottom of page 186 in Deb et al. (2002).
         let mut last_front: Option<Vec<Individual>> = None;
-        for (fi, front) in sorting_results.fronts.into_iter().enumerate() {
+        for (fi, mut front) in sorting_results.fronts.into_iter().enumerate() {
             if new_population.len() + front.len() <= self.number_of_individuals {
                 debug!("Adding front #{} (size: {})", fi + 1, front.len());
+                NSGA2::set_crowding_distance(&mut front)?;
                 new_population.add_new_individuals(front);
             } else if new_population.len() == self.number_of_individuals {
                 debug!("Population reached target size");
@@ -376,7 +393,7 @@ impl<'a> Algorithm<NSGA2Arg> for NSGA2<'a> {
                     "Population almost full ({} individuals)",
                     new_population.len()
                 );
-                last_front = Some(front.clone());
+                last_front = Some(front);
                 break;
             }
         }
@@ -401,10 +418,9 @@ impl<'a> Algorithm<NSGA2Arg> for NSGA2<'a> {
             new_population.add_new_individuals(last_front);
         }
 
-        // update the population and the distance for the CrowdedComparison operator at the next
-        // loop
+        // the crowding distance was set front by front above, as the CrowdedComparison operator
+        // only compares distances of individuals with the same rank
         self.population = new_population;
-        NSGA2::set_crowding_distance(self.population.individuals_as_mut())?;
 
         self.generation += 1;
 
@@ -429,7 +445,8 @@ mod test_sorting {
     use crate::algorithms::nsga2::CROWDING_DIST_KEY;
     use crate::algorithms::NSGA2;
     use crate::core::test_utils::individuals_from_obj_values_dummy;
-    use crate::core::{DataValue, Individuals, ObjectiveDirection};
+    use crate::core::{DataValue, Individuals, ObjectiveDirection, Population};
+    use crate::utils::RANK_KEY;
 
     #[test]
     /// Test the crowding distance algorithm (not enough points).
@@ -464,11 +481,68 @@ mod test_sorting {
             None,
         );
         NSGA2::set_crowding_distance(&mut individuals).unwrap();
+        // flat objectives are skipped, so identical points share the same distance
         for i in individuals {
-            assert_eq!(
-                i.get_data(CROWDING_DIST_KEY).unwrap(),
-                DataValue::Real(f64::MAX)
-            );
+            assert_eq!(i.get_data(CROWDING_DIST_KEY).unwrap(), DataValue::Real(0.0));
+        }
+    }
+
+    #[test]
+    /// A flat objective is skipped, the other objectives still set the distance.
+    fn test_crowding_distance_one_flat_objective() {
+        let objectives = vec![
+            vec![0.0, 3.0, 5.0],
+            vec![1.0, 2.0, 5.0],
+            vec![3.0, 0.0, 5.0],
+        ];
+        let mut individuals = individuals_from_obj_values_dummy(
+            &objectives,
+            &[ObjectiveDirection::Minimise; 3],
+            None,
+        );
+        NSGA2::set_crowding_distance(&mut individuals).unwrap();
+        let d: Vec<f64> = individuals
+            .iter()
+            .map(|i| i.get_data(CROWDING_DIST_KEY).unwrap().as_real().unwrap())
+            .collect();
+        assert_eq!(d[0], f64::MAX);
+        assert_eq!(d[2], f64::MAX);
+        // (3 - 0) / 3 + (3 - 0) / 3
+        assert_approx_eq!(f64, d[1], 2.0);
+    }
+
+    #[test]
+    /// The crowding distance is computed within each front, so the extremes of the second front
+    /// get an infinite distance too.
+    fn test_rank_and_crowd_per_front() {
+        let objectives = vec![
+            // front 1
+            vec![0.0, 4.0],
+            vec![2.0, 2.0],
+            vec![4.0, 0.0],
+            // front 2
+            vec![1.0, 5.0],
+            vec![3.0, 3.0],
+            vec![5.0, 1.0],
+        ];
+        let individuals = individuals_from_obj_values_dummy(
+            &objectives,
+            &[ObjectiveDirection::Minimise, ObjectiveDirection::Minimise],
+            None,
+        );
+        let mut population = Population::new_with(individuals);
+        let ranked = NSGA2::rank_and_crowd(&mut population).unwrap();
+        for i in ranked.individuals() {
+            let rank = i.get_data(RANK_KEY).unwrap().as_integer().unwrap();
+            let d = i.get_data(CROWDING_DIST_KEY).unwrap().as_real().unwrap();
+            let obj = i.get_objective_values().unwrap();
+            let is_extreme = obj[0] == 0.0 || obj[0] == 4.0 || obj[0] == 1.0 || obj[0] == 5.0;
+            assert!(rank == 1 || rank == 2);
+            if is_extreme {
+                assert_eq!(d, f64::MAX, "{obj:?}");
+            } else {
+                assert_approx_eq!(f64, d, 2.0);
+            }
         }
     }
 
@@ -719,7 +793,7 @@ mod test_problems {
             threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
-            seed: Some(1),
+            seed: Some(2),
         };
         let mut algo = NSGA2::new(Arc::new(problem), args).unwrap();
         algo.run().unwrap();
@@ -766,7 +840,7 @@ mod test_problems {
             threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
-            seed: Some(1),
+            seed: Some(2),
         };
         let mut algo = NSGA2::new(Arc::new(problem), args).unwrap();
         algo.run().unwrap();
@@ -818,7 +892,7 @@ mod test_problems {
             threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
-            seed: Some(1),
+            seed: Some(2),
         };
         let mut algo = NSGA2::new(Arc::new(problem), args).unwrap();
         algo.run().unwrap();
