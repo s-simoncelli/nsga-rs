@@ -14,7 +14,7 @@ use crate::core::{EvaluationResult, Evaluator, Individual};
 /// returns: `Box<dyn RngCore>`
 pub(crate) fn get_rng(seed: Option<u64>) -> Box<dyn RngCore> {
     let rng = match seed {
-        None => ChaCha8Rng::from_seed(Default::default()),
+        None => ChaCha8Rng::from_os_rng(),
         Some(s) => ChaCha8Rng::seed_from_u64(s),
     };
     Box::new(rng)
