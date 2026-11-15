@@ -189,11 +189,13 @@ impl Variable<String> for Choice {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 #[cfg_attr(feature = "python", derive(IntoPyObject))]
+// Integer must come before Real: serde tries untagged variants in order and an f64 also accepts
+// JSON integers. f64 values are always written with a decimal point and fail as i64.
 pub enum VariableType {
-    /// A continuous bounded variable (f64)
-    Real(BoundedNumber<f64>),
     /// A discrete bounded variable (i64)
     Integer(BoundedNumber<i64>),
+    /// A continuous bounded variable (f64)
+    Real(BoundedNumber<f64>),
     /// A boolean variable
     Boolean(Boolean),
     /// A variable representing a choice (as string)
@@ -266,11 +268,12 @@ impl Display for VariableType {
 #[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "python", pyclass(from_py_object), derive(IntoPyObjectRef))]
 #[serde(untagged)]
+// Integer must come before Real (see `VariableType`)
 pub enum VariableValue {
-    /// The value for a floating-point number. This is a f64.
-    Real(f64),
     /// The value for an integer number. This is an i64.
     Integer(i64),
+    /// The value for a floating-point number. This is a f64.
+    Real(f64),
     /// The value for a boolean variable.
     Boolean(bool),
     /// The value for a choice variable.
