@@ -201,11 +201,8 @@ impl EpsNSGA2 {
     ///
     /// returns: `Result<(), OError>`
     fn set_box_data(individual: &mut Individual, eps: &[f64]) -> Result<(), OError> {
-        // skip if individuals has the data already
-        if individual.get_data(IDENTIFICATION_ARRAY_KEY).is_ok() {
-            return Ok(());
-        }
-
+        // always recompute (it is cheap): individuals resumed from a file may carry box data
+        // from a run with a different eps
         let mut b_vector = vec![];
         let mut obj_box_coords = vec![];
         for (j, f_j) in individual.get_objective_values()?.iter().enumerate() {
@@ -368,7 +365,7 @@ impl Algorithm<EpsNSGA2Arg> for EpsNSGA2 {
                 seed: self
                     .algorithm_options()
                     .seed
-                    .map(|s| s + self.generation as u64),
+                    .map(|s| s.wrapping_add(u64::from(self.generation))),
                 threads: self.algorithm_options().threads,
                 export_history: None,
             };
