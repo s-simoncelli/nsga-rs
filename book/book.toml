@@ -1,0 +1,11 @@
+[book]
+title = "NSGA RS user guide"
+authors = ["Stefano Simoncelli"]
+language = "en"
+src = "src"
+
+[output.html]
+git-repository-url = "https://github.com/s-simoncelli/nsga_rs"
+edit-url-template = "https://github.com/s-simoncelli/nsga_rs/edit/main/book/{path}"
+mathjax-support = true
+preferred-dark-theme = "ayu"

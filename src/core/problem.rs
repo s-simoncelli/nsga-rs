@@ -512,6 +512,7 @@ pub mod builtin_problems {
         ObjectiveDirection, Problem, RelationalOperator, VariableType,
     };
 
+    // ANCHOR: sch_problem
     /// The Schaffer’s study (SCH) problem.
     #[derive(Debug)]
     pub struct SCHProblem;
@@ -554,6 +555,7 @@ pub mod builtin_problems {
             })
         }
     }
+    // ANCHOR_END: sch_problem
 
     /// The Fonseca and Fleming’s study (FON) problem.
     #[derive(Debug)]
