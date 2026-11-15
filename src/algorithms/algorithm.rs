@@ -95,26 +95,9 @@ impl<T: Serialize> AlgorithmSerialisedExport<T> {
     /// returns: `Result<Vec<Individual>, OError>`
     pub fn individuals(&self) -> Result<Vec<Individual>, OError> {
         let problem = Arc::new(self.problem()?);
-        let mut individuals: Vec<Individual> = vec![];
-        for individual_data in &self.individuals {
-            let mut ind = Individual::new(problem.clone());
-            for (name, value) in &individual_data.objective_values {
-                ind.update_objective(name, *value)?;
-            }
-            for (name, value) in &individual_data.constraint_values {
-                ind.update_constraint(name, *value)?;
-            }
-            for (name, value) in &individual_data.variable_values {
-                ind.update_variable(name, value.clone())?;
-            }
-            for (name, value) in &individual_data.data {
-                ind.set_data(name, value.clone());
-            }
-            ind.set_evaluated();
-            individuals.push(ind);
-        }
-
-        Ok(individuals)
+        Ok(Population::deserialise(&self.individuals, problem)?
+            .individuals()
+            .to_vec())
     }
 
     #[cfg(feature = "plotting")]
@@ -437,14 +420,14 @@ impl AlgorithmExport {
         let mut ref_points = self.get_nsga3_reference_points(ExportVecGroupBy::Individual)?;
         // split using the original number of points
         let original_point_count = match self.additional_data.get("number_of_reference_points") {
-            Some(count) => count.as_real()?, // NOTE: this is deserialised as real
+            Some(count) => count.as_usize()?,
             None => {
                 return Err(OError::Generic(
                     "Cannot find additional_data.number_of_reference_points".to_string(),
                 ))
             }
         };
-        let adaptive_points = ref_points.split_off(original_point_count as usize);
+        let adaptive_points = ref_points.split_off(original_point_count);
 
         let result = match group_by {
             ExportVecGroupBy::Individual => ReferencePointType {
