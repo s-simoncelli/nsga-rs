@@ -105,3 +105,31 @@ Source: [`examples/eps_nsga2_sch.rs`](https://github.com/s-simoncelli/nsga_rs/bl
 solves DTLZ1 with `eps: [0.05; 3].to_vec()`:
 
 ![DTLZ1 Eps-NSGA2 Pareto front](../images/DTLZ1_3obj_EpsNSGA2_Pareto_front.png)
+
+## Example: hyper-volume comparison with NSGA2 on DTLZ1
+
+[`examples/hv_comparison_dtlz1.rs`](https://github.com/s-simoncelli/nsga-rs/blob/main/examples/hv_comparison_dtlz1.rs)
+solves the same 3-objective DTLZ1 problem with `NSGA2` (92 individuals) and `EpsNSGA2`
+(`eps: [0.05; 3].to_vec()`) for 1000 generations. Both algorithms export their population
+every 50 generations with `ExportHistory`, and the hyper-volume is calculated from these files.
+
+To compare the two algorithms, the hyper-volume must use the same reference point. The
+example takes the worst value of each objective across both histories and adds `1.0`, so that
+the point is dominated by every exported solution:
+
+```rust,ignore
+{{#include ../../../examples/hv_comparison_dtlz1.rs:ref_point}}
+```
+
+The history JSON files are deleted at the end of the example.
+
+NSGA2 reaches its final hyper-volume within the first 50 generations. ε-NSGA2 starts from a
+small population that grows with each intra-run, so it converges more slowly and settles at a
+slightly lower value, because the archive keeps at most one solution per ε hyper-box:
+
+![DTLZ1 NSGA2 vs Eps-NSGA2 hyper-volume](../images/DTLZ1_3obj_NSGA2_vs_EpsNSGA2_convergence_chart.png)
+
+Both fronts lie on the DTLZ1 optimal plane, with ε-NSGA2 giving fewer, more evenly spaced
+solutions:
+
+![DTLZ1 NSGA2 vs Eps-NSGA2 Pareto fronts](../images/DTLZ1_3obj_NSGA2_vs_EpsNSGA2_Pareto_front.png)

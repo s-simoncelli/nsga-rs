@@ -11,7 +11,7 @@ use crate::algorithms::AlgorithmSerialisedExport;
 use crate::core::{Individual, Individuals, OError, Objective, ObjectiveDirection, Problem};
 use crate::metrics::hypervolume_2d::HyperVolume2D;
 use crate::metrics::{HyperVolumeFonseca2006, HyperVolumeWhile2012};
-use crate::utils::vector_max;
+use crate::utils::{vector_max, vector_min};
 
 /// Check the input arguments of the hyper-volume functions.
 ///
@@ -144,6 +144,8 @@ pub struct HyperVolume;
 pub struct HyperVolumeFileData {
     /// The evolution number the metric was calculated for.
     pub generation: u32,
+    /// The number of function evaluations when the metric was calculated.
+    pub nfe: u32,
     /// The time when the file adn therefore the objectives were created.
     pub time: DateTime<Utc>,
     /// The hyper-volume value.
@@ -161,6 +163,31 @@ impl AllHyperVolumeFileData {
         self.0.iter().map(|s| s.value).collect()
     }
 
+    /// Get all hyper-volume values but values are normalised using the
+    /// calculated max and min.
+    ///
+    /// # Arguments
+    ///  * `min_max`: If given, the values are normalised with respect to the given
+    ///  min and max point.
+    ///
+    /// returns: `Result<Vec<f64>, OError>`
+    pub fn normalised_values(&self, min_max: Option<(f64, f64)>) -> Result<Vec<f64>, OError> {
+        let values = self.values();
+
+        let (hv_min, hv_max) = if let Some((min, max)) = min_max {
+            if max < min {
+                return Err(OError::Generic(
+                    "The min point must be larger than the max".to_string(),
+                ));
+            }
+            (min, max)
+        } else {
+            (vector_min(&values)?, vector_max(&values)?)
+        };
+        let delta = hv_max - hv_min;
+        Ok(values.iter().map(|v| (hv_max - *v) / delta).collect())
+    }
+
     /// Get all hyper-volume generations.
     ///
     /// returns: `Vec<u32>`
@@ -168,11 +195,30 @@ impl AllHyperVolumeFileData {
         self.0.iter().map(|s| s.generation).collect()
     }
 
+    /// Get all hyper-volume number of function evaluations.
+    ///
+    /// returns: `Vec<u32>`
+    pub fn nfe(&self) -> Vec<u32> {
+        self.0.iter().map(|s| s.nfe).collect()
+    }
+
     /// Get all [`DateTime<Utc>`] when individual objectives were exported.
     ///
     /// returns: `Vec<DateTime<Utc>>`
     pub fn times(&self) -> Vec<DateTime<Utc>> {
         self.0.iter().map(|s| s.time).collect()
+    }
+
+    /// Get elapsed duration in seconds since the algorithm started when the files was
+    /// exported.
+    ///
+    /// returns: `Vec<i64>`
+    pub fn duration_as_secs(&self) -> Vec<i64> {
+        let times = self.times();
+        times
+            .iter()
+            .map(|t| (*t - times[0]).num_seconds())
+            .collect::<Vec<i64>>()
     }
 }
 
@@ -251,7 +297,7 @@ impl HyperVolume {
     }
 
     /// Calculate the hyper-volume using serialised objective values (i.e. exported in a JSON file
-    /// using [`crate::algorithms::Algorithm::save_to_json`]).  
+    /// using [`crate::algorithms::Algorithm::save_to_json`]).
     ///
     /// # Arguments
     ///
@@ -278,6 +324,7 @@ impl HyperVolume {
 
         let results = HyperVolumeFileData {
             generation: data.generation,
+            nfe: data.number_of_function_evaluations,
             time: data.exported_on,
             value,
         };
@@ -408,7 +455,7 @@ impl HyperVolume {
     ///
     /// * `data`: The serialised data. This can be imported using [`crate::algorithms::Algorithm::read_json_file`]
     ///    where [`crate::algorithms::Algorithm`] is the algorithm used to export the data (for example
-    ///    [`crate::algorithms::NSGA2`]).    
+    ///    [`crate::algorithms::NSGA2`]).
     /// * `offset`: The offset to add to each objective coordinate of the calculated reference
     ///    point. This must have a size equal to the number of objectives in the problem
     ///    ([`Problem::number_of_objectives`]).

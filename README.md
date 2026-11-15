@@ -3,7 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/nsga_rs.svg)](https://crates.io/crates/nsga_rs)
 [![Documentation](https://docs.rs/nsga_rs/badge.svg)](https://docs.rs/nsga_rs)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
-[![User guide](https://img.shields.io/badge/user%20guide-mdBook-orange.svg)](https://s-simoncelli.github.io/nsga_rs/)
+[![User guide](https://img.shields.io/badge/user%20guide-mdBook-orange.svg)](https://s-simoncelli.github.io/nsga-rs/)
 
 **NSGA RS** is a Rust framework for solving multi-objective optimisation problems using the
 NSGA family of multi-objective evolutionary algorithms (MOEAs). It gives you fast, parallel, and fully serialisable optimisation pipelines — from problem definition through to Pareto-front visualisation.
@@ -94,7 +94,7 @@ impl SCHProblem {
 }
 
 // Implement the function to evaluate the objectives and constraints. The `evaluate`
-// function below receives the individuals which contain the variables/solutions `x` 
+// function below receives the individuals which contain the variables/solutions `x`
 // proposed by the algorithm. The function must return the evaluated objectives and
 // constraints in the `EvaluationResult` struct.
 impl Evaluator for SCHProblem {
@@ -166,7 +166,7 @@ All examples live in the [`examples/`](examples/) folder and can be run with `ca
 | `NSGA3`         | Reference-point-based NSGA for many-objective problems                                                      |
 | `AdaptiveNSGA3` | Adaptive variant (Jain & Deb, 2014) for problems where not all reference points intersect the optimal front |
 
-A step-by-step [user guide](https://s-simoncelli.github.io/nsga_rs/) explains each algorithm and feature. Full API documentation is on [docs.rs](https://docs.rs/nsga_rs/).
+A step-by-step [user guide](https://s-simoncelli.github.io/nsga-rs/) explains each algorithm and feature. Full API documentation is on [docs.rs](https://docs.rs/nsga_rs/).
 
 ## Stopping Conditions
 
