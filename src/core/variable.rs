@@ -189,8 +189,8 @@ impl Variable<String> for Choice {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 #[cfg_attr(feature = "python", derive(IntoPyObject))]
-// Integer must come before Real: serde tries untagged variants in order and an f64 also accepts
-// JSON integers. f64 values are always written with a decimal point and fail as i64.
+// Integer must come before Real. f64 values are always written with a decimal point and
+// fail as i64.
 pub enum VariableType {
     /// A discrete bounded variable (i64)
     Integer(BoundedNumber<i64>),
