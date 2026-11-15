@@ -1,3 +1,47 @@
+## [1.5.0] - 2026-11-15
+
+### 🚀 Features
+
+- Added ability to specify custom function in StoppingCondition to stop the algorithm evolution. The Python API was also tweaked to allow conversion from PyStoppingConditionMap
+- Moved common fields (crossover_operator_options, mutation_operator_options, resume_from_file and seed) used to initialise algorithms into as_algorithm_args proc macro
+- All algorithms require Arc<Problem> for initialisation so that Problem can be cloned
+- Added DataValue::IntVector to add support for i64 data for Individual
+- Fast_non_dominated_sort can also now calculate and sort the Pareto fronts using custom data stored in Individual
+- Added euclidean_distance distance in utils crate so that it can be reused
+- Added support to generics in #[algorithm] proc macro
+- Added after_evolve field, and set_after_evolve and set_stopping_condition_as_any method in NSGA2 so that the algorithm can be integrated within Esp-NSGA2 under development
+- Algorithm::evolve now returns EvolveStatus which determine whether to stop the evolution
+- Added ϵ-Domination NSGA2 algorithm with tests and examples
+- Added a new stopping condition that stops an algorithm when the relative change of the hyper-volume between the current generation and delta generations is below a threshold
+
+### 🐛 Bug Fixes
+
+- Use Mutex in custom StoppingCondition to ensure support via Python
+- A custom stopping condition function receives the generation and NFE numbers
+- Fixed missing IntVector in IntoPYObject trait for DataValue
+- Include all path segments in algorithm_trait_items
+- Require published version of nsga-rs-macros
+- Fixed StoppingCondition::MaxDurationAsMinutes and StoppingCondition::MaxDurationAsHours to use start time instead of current time to assess the duration
+
+### 📚 Documentation
+
+- Fixed commands in examples files
+
+### ⚙️ Miscellaneous Tasks
+
+- Renamed proc macros in nsga-rs-macros crate
+- Moved algorithm_options_as_str to algorithm crate as function. Added Algorithm::generation_as_ref()
+- Moved Pareto constraint dominance logic to utils module so that the function can be reused
+- NSGA2.set_after_evolve now can return EvolveStatus. Also added set_opulation method
+- StoppingCondition::Function was removed as this can be handled by Algorithm.after_evolve
+- The population item can now be access at crate level
+- Bumped nsga-rs-macros version
+- NSGA2::set_crowding_distance is not public in crate
+- Fixed publish pipeline tagging
+- The publish CI now bumps the nsga_rs crate version
+- Remove wrong code from eps-nsga2 DTLZ1 example
+- Removed unused imports in eps_nsga2::mod
+- Use github app to bypass PR restrictions when publishing
 ## [1.4.1] - 2026-07-18
 
 ### 🚀 Features
@@ -7,10 +51,12 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Renamed HyperVolume::from_individual to HyperVolume::from_individuals
+- *(release)* 1.4.1
 ## [1.4.0] - 2026-07-18
 
 ### 🚀 Features
 
+- Added option to specify the number of threads for parallel evaluation using `NumThreads`. Previously it was only possible to use no threads or the available max
 - Load pool thread only once and do not set max threads on unlimited threads
 - Added estimation of time left to reach stopping condition with max duration, generation and function evaluations
 
@@ -42,7 +88,6 @@
 - Moved plotting functionalities to rust with gnuplot
 - Added get_min_objectives and get_max_objectives methods to Population and Individuals structs
 - Added create_py_reader_interface macro to export Python reader and added tests
-- Added option to specify the number of threads for parallel evaluation using `NumThreads`. Previously it was only possible to use no threads or the available max
 
 ### 🐛 Bug Fixes
 
@@ -87,12 +132,14 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Updated changelog for version 1.2.1
-## [1.2.0] - 2025-03-16
+## [1.2.1] - 2025-03-16
 
 ### ⚙️ Miscellaneous Tasks
 
-- Updated changelog file to include changes up to version 1.2.0
-## [1.2.1] - 2025-03-16
+- Bumped optirustic-macro version
+- Made pyo3-build-config dependency optional
+- Use new macro dep version from crate.io
+## [1.2.0] - 2025-03-16
 
 ### 🚀 Features
 
@@ -109,9 +156,7 @@
 - Run Rust test with default features
 - Fixed Python pipeline to run ruff
 - Use optirustic-py path in Python CI
-- Bumped optirustic-macro version
-- Made pyo3-build-config dependency optional
-- Use new macro dep version from crate.io
+- Updated changelog file to include changes up to version 1.2.0
 ## [1.1.3] - 2025-02-26
 
 ### 🐛 Bug Fixes
