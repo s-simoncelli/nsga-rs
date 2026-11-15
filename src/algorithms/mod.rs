@@ -9,7 +9,7 @@ pub use eps_nsga2::{
 };
 pub use nsga2::{NSGA2Arg, CROWDING_DIST_KEY, NSGA2};
 pub use nsga3::{NSGA3Arg, Nsga3NumberOfIndividuals, NSGA3};
-pub use stopping_condition::StoppingCondition;
+pub use stopping_condition::{HyperVolumeChange, StoppingCondition};
 
 #[cfg(feature = "python")]
 use algorithm::create_py_reader_interface;

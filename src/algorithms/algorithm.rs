@@ -876,6 +876,9 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
             StoppingCondition::MaxFunctionEvaluations(nfe) => {
                 *nfe <= self.number_of_function_evaluations()
             }
+            StoppingCondition::HyperVolumeChange(c) => {
+                c.is_met(self.generation(), self.population())?
+            }
             StoppingCondition::Any(conditions) => {
                 if StoppingCondition::has_nested_vector(conditions) {
                     return Err(OError::AlgorithmRun(
@@ -883,9 +886,13 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
                         "A vector of stopping condition vector is not allowed".to_string(),
                     ));
                 }
+                // check all conditions so that stateful ones (e.g. hyper-volume) are updated
                 conditions
                     .iter()
-                    .any(|c| self.is_stopping_condition_met(c).unwrap())
+                    .map(|c| self.is_stopping_condition_met(c))
+                    .collect::<Result<Vec<bool>, OError>>()?
+                    .into_iter()
+                    .any(|met| met)
             }
             StoppingCondition::All(conditions) => {
                 if StoppingCondition::has_nested_vector(conditions) {
@@ -894,9 +901,13 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
                         "A vector of stopping condition vector is not allowed".to_string(),
                     ));
                 }
+                // check all conditions so that stateful ones (e.g. hyper-volume) are updated
                 conditions
                     .iter()
-                    .all(|c| self.is_stopping_condition_met(c).unwrap())
+                    .map(|c| self.is_stopping_condition_met(c))
+                    .collect::<Result<Vec<bool>, OError>>()?
+                    .into_iter()
+                    .all(|met| met)
             }
         };
         Ok(is_met)
@@ -1408,7 +1419,9 @@ mod test {
     use std::path::Path;
     use std::sync::Arc;
 
-    use crate::algorithms::{Algorithm, NSGA2Arg, NumThreads, StoppingCondition, NSGA2};
+    use crate::algorithms::{
+        Algorithm, HyperVolumeChange, NSGA2Arg, NumThreads, StoppingCondition, NSGA2,
+    };
     use crate::core::builtin_problems::{SCHProblem, ZTD1Problem};
 
     #[test]
@@ -1525,6 +1538,37 @@ mod test {
 
         assert_eq!(results.number_of_function_evaluations, 20);
         assert_eq!(results.generation, 2);
+    }
+
+    #[test]
+    /// Test StoppingConditionType::HyperVolumeChange
+    fn test_stopping_condition_hypervolume_change() {
+        assert!(HyperVolumeChange::new(vec![1.0], 0.1, 0).is_err());
+        assert!(HyperVolumeChange::new(vec![1.0], -0.1, 5).is_err());
+        assert!(HyperVolumeChange::new(vec![], 0.1, 5).is_err());
+
+        let problem = SCHProblem::create().unwrap();
+        // objectives are at most ~1e6 given the variable bounds
+        let hv_cond = HyperVolumeChange::new(vec![2e6, 2e6], 0.01, 5).unwrap();
+        let args = NSGA2Arg {
+            number_of_individuals: 10,
+            stopping_condition: StoppingCondition::Any(vec![
+                StoppingCondition::HyperVolumeChange(hv_cond),
+                StoppingCondition::MaxGeneration(500),
+            ]),
+            crossover_operator_options: None,
+            mutation_operator_options: None,
+            threads: NumThreads::Off,
+            export_history: None,
+            resume_from_file: None,
+            seed: Some(10),
+        };
+        let mut algo = NSGA2::new(Arc::new(problem), args).unwrap();
+        algo.run().unwrap();
+        let results = algo.get_results();
+
+        assert!(results.generation > 5);
+        assert!(results.generation < 500);
     }
 }
 
