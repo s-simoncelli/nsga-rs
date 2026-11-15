@@ -26,6 +26,7 @@ use nsga_rs::metrics::HyperVolume;
 ///
 /// `cargo run --example convergence -p nsga_rs --release`
 fn main() -> Result<(), OError> {
+    env_logger::builder().filter_level(log::LevelFilter::Info).init();
     let problem = SCHProblem::create()?;
     let out_path = PathBuf::from(&env::current_dir().expect("Cannot fetch current directory"))
         .join("examples")
