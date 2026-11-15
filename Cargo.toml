@@ -7,7 +7,7 @@ authors = [
 edition = "2021"
 rust-version = "1.80"
 description = "A Rust implementation of the NSGA family of multi-objective evolutionary algorithms"
-repository = "https://github.com/s-simoncelli/nsga_rs"
+repository = "https://github.com/s-simoncelli/nsga-rs"
 keywords = [
     "genetic-algorithm",
     "optimisation",
