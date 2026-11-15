@@ -1,3 +1,22 @@
+## [1.6.0] - 2026-11-15
+
+### 🚀 Features
+
+- The HyperVolumeFileData struct can now return the number of function evaluations, the normalised values and the elapsed duration in seconds
+
+### 🐛 Bug Fixes
+
+- Fixed repo URL in book and README
+- Fixed repo Cargo and README files
+
+### 📚 Documentation
+
+- Added book for website documentation
+- Added pareto front and hyper-volume comparison with NSGA2 and Eps-NSGA2 on DTLZ1
+
+### ⚙️ Miscellaneous Tasks
+
+- Fixed linting in convergence.rs
 ## [1.5.0] - 2026-11-15
 
 ### 🚀 Features
@@ -42,6 +61,7 @@
 - Remove wrong code from eps-nsga2 DTLZ1 example
 - Removed unused imports in eps_nsga2::mod
 - Use github app to bypass PR restrictions when publishing
+- *(release)* V1.5.0
 ## [1.4.1] - 2026-07-18
 
 ### 🚀 Features
