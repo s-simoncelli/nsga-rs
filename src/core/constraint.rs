@@ -113,6 +113,11 @@ impl Constraint {
         self.name.clone()
     }
 
+    /// Get the constraint name without copying it.
+    pub(crate) fn name_str(&self) -> &str {
+        &self.name
+    }
+
     /// Check whether the constraint is met. This is assessed as follows:
     ///  - Equality operator ([`RelationalOperator::EqualTo`]): value == target
     ///  - Inequality operator ([`RelationalOperator::NotEqualTo`]): value != target
