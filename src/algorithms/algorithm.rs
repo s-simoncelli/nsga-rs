@@ -1022,15 +1022,6 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
                 )
             })?;
 
-        // invert sign of maximised objective values
-        for ind in &mut history.individuals {
-            for (name, value) in ind.objective_values.iter_mut() {
-                if history.problem.objectives[name].direction() == ObjectiveDirection::Maximise {
-                    *value *= -1.0;
-                }
-            }
-        }
-
         Ok(history)
     }
 
