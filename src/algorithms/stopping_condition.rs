@@ -1,5 +1,114 @@
+use crate::core::{OError, Population};
+use crate::metrics::HyperVolume;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use std::sync::Mutex;
+
+/// Stop when the relative change of the hyper-volume between the current generation and
+///`generations` is below `threshold_percent`. The hyper-volume is only calculated every
+/// `generations` to limit its cost.
+#[cfg_attr(feature = "python", pyclass(from_py_object))]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct HyperVolumeChange {
+    /// The reference point used to calculate the hyper-volume.
+    reference_point: Vec<f64>,
+    /// The relative hyper-volume change (as percentage) below which the evolution stops.
+    threshold_percent: f64,
+    /// The number of generations between the two hyper-volume values being compared.
+    generations: u32,
+    /// The generation and hyper-volume of the last check. This uses interior mutability because
+    /// the stopping condition is checked via `&self`; a `Mutex` keeps the struct `Sync` for Python.
+    #[serde(skip)]
+    last: Mutex<Option<(u32, f64)>>,
+}
+
+impl Clone for HyperVolumeChange {
+    fn clone(&self) -> Self {
+        Self {
+            reference_point: self.reference_point.clone(),
+            threshold_percent: self.threshold_percent,
+            generations: self.generations,
+            last: Mutex::new(*self.last.lock().unwrap()),
+        }
+    }
+}
+
+impl HyperVolumeChange {
+    /// Create the stopping condition.
+    ///
+    /// # Arguments
+    ///
+    /// * `reference_point`: The reference point to calculate the hyper-volume with.
+    /// * `threshold_percent`: The relative hyper-volume change (as percentage, for example `0.1`
+    ///   for 0.1%) below which the evolution stops.
+    /// * `generations`: The number of generations between the two hyper-volume values to compare.
+    ///
+    /// returns: `Result<HyperVolumeChange, OError>`
+    pub fn new(
+        reference_point: Vec<f64>,
+        threshold_percent: f64,
+        generations: u32,
+    ) -> Result<Self, OError> {
+        let error = |msg: &str| Err(OError::Generic(format!("HyperVolumeChange: {msg}")));
+        if reference_point.is_empty() {
+            return error("the reference point cannot be empty");
+        }
+        if generations == 0 {
+            return error("the number of generations must be larger than 0");
+        }
+        if !(threshold_percent >= 0.0) {
+            return error("the threshold must be a positive number");
+        }
+        Ok(Self {
+            reference_point,
+            threshold_percent,
+            generations,
+            last: Mutex::new(None),
+        })
+    }
+
+    /// Check whether the relative hyper-volume change since the last check is below the
+    /// threshold. To limit the cost, the hyper-volume is only calculated every `generations`.
+    ///
+    /// # Arguments
+    ///
+    /// * `generation`: The current generation.
+    /// * `population`: The current population.
+    ///
+    /// returns: `Result<bool, OError>`
+    pub fn is_met(&self, generation: u32, population: &Population) -> Result<bool, OError> {
+        let mut last = self.last.lock().unwrap();
+        if let Some((last_gen, _)) = *last {
+            if generation < last_gen + self.generations {
+                return Ok(false);
+            }
+        }
+
+        let hv = HyperVolume::from_individuals(
+            &mut population.individuals().to_vec(),
+            &self.reference_point,
+        )?;
+        let past = last.replace((generation, hv));
+        Ok(match past {
+            Some((_, past_hv)) if past_hv != 0.0 => {
+                (hv - past_hv).abs() / past_hv * 100.0 < self.threshold_percent
+            }
+            _ => false,
+        })
+    }
+}
+
+impl Display for HyperVolumeChange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "hyper-volume change < {}% over {} generations",
+            self.threshold_percent, self.generations
+        )
+    }
+}
 
 /// The type of stopping condition. Pick one type to inform the algorithm how/when it should
 /// terminate the population evolution.
@@ -13,6 +122,9 @@ pub enum StoppingCondition {
     MaxGeneration(u32),
     /// Set a maximum number of function evaluations.
     MaxFunctionEvaluations(u32),
+    /// Stop when the relative hyper-volume change over a number of generations is below a
+    /// threshold.
+    HyperVolumeChange(HyperVolumeChange),
     /// Stop when at least on condition is met (this acts as an OR operator).
     Any(Vec<StoppingCondition>),
     /// Stop when all conditions are met (this acts as an AND operator).
@@ -31,6 +143,7 @@ impl StoppingCondition {
             StoppingCondition::MaxFunctionEvaluations(v) => {
                 format!("maximum number of function evaluations={v}")
             }
+            StoppingCondition::HyperVolumeChange(c) => c.to_string(),
             StoppingCondition::Any(s) => s
                 .iter()
                 .map(|cond| cond.name())
@@ -66,6 +179,7 @@ impl Display for StoppingCondition {
             StoppingCondition::MaxDurationAsHours(duration) => write!(f, "{duration} hours"),
             StoppingCondition::MaxGeneration(generation) => write!(f, "{generation} generations"),
             StoppingCondition::MaxFunctionEvaluations(nfe) => write!(f, "{nfe} evaluations"),
+            StoppingCondition::HyperVolumeChange(c) => write!(f, "{c}"),
             StoppingCondition::Any(values) => {
                 let values: Vec<String> = values.iter().map(|c| format!("{c}")).collect();
                 write!(f, "{}", values.join(" OR "))
@@ -80,8 +194,40 @@ impl Display for StoppingCondition {
 
 #[cfg(feature = "python")]
 pub mod py {
-    use crate::algorithms::StoppingCondition;
-    use pyo3::{prelude::*, types::PyList, IntoPyObjectExt};
+    use crate::algorithms::{HyperVolumeChange, StoppingCondition};
+    use pyo3::{exceptions::PyValueError, prelude::*, types::PyList, IntoPyObjectExt};
+
+    #[pymethods]
+    impl HyperVolumeChange {
+        #[new]
+        fn py_new(
+            reference_point: Vec<f64>,
+            threshold_percent: f64,
+            generations: u32,
+        ) -> PyResult<Self> {
+            HyperVolumeChange::new(reference_point, threshold_percent, generations)
+                .map_err(|e| PyValueError::new_err(e.to_string()))
+        }
+
+        #[getter]
+        fn reference_point(&self) -> Vec<f64> {
+            self.reference_point.clone()
+        }
+
+        #[getter]
+        fn threshold_percent(&self) -> f64 {
+            self.threshold_percent
+        }
+
+        #[getter]
+        fn generations(&self) -> u32 {
+            self.generations
+        }
+
+        fn __repr__(&self) -> String {
+            format!("HyperVolumeChange({self})")
+        }
+    }
 
     /// Handle conversion of `StoppingCondition` into Python object for `NSGA*Args` structs.
     impl<'py> IntoPyObject<'py> for StoppingCondition {
@@ -102,6 +248,9 @@ pub mod py {
                 }
                 StoppingCondition::MaxFunctionEvaluations(nfe) => {
                     PyStoppingConditionValue::max_function_evaluations(nfe).into_bound_py_any(py)
+                }
+                StoppingCondition::HyperVolumeChange(c) => {
+                    PyStoppingConditionValue::hypervolume_change(c).into_bound_py_any(py)
                 }
                 StoppingCondition::Any(stopping_conditions)
                 | StoppingCondition::All(stopping_conditions) => {
@@ -126,16 +275,18 @@ pub mod py {
         max_duration_as_hours(u32),
         max_generation(u32),
         max_function_evaluations(u32),
+        hypervolume_change(HyperVolumeChange),
     }
 
     #[pymethods]
     impl PyStoppingConditionValue {
-        fn value(&self) -> u32 {
+        fn value(&self) -> PyResult<f64> {
             match self {
-                PyStoppingConditionValue::max_duration_as_minutes(v) => *v,
-                PyStoppingConditionValue::max_duration_as_hours(v) => *v,
-                PyStoppingConditionValue::max_generation(v) => *v,
-                PyStoppingConditionValue::max_function_evaluations(v) => *v,
+                PyStoppingConditionValue::max_duration_as_minutes(v) => Ok(*v as f64),
+                PyStoppingConditionValue::max_duration_as_hours(v) => Ok(*v as f64),
+                PyStoppingConditionValue::max_generation(v) => Ok(*v as f64),
+                PyStoppingConditionValue::max_function_evaluations(v) => Ok(*v as f64),
+                PyStoppingConditionValue::hypervolume_change(data) => Ok(data.threshold_percent()),
             }
         }
 
@@ -153,6 +304,7 @@ pub mod py {
                 PyStoppingConditionValue::max_function_evaluations(nfe) => {
                     format!("NFE={nfe} evaluations")
                 }
+                PyStoppingConditionValue::hypervolume_change(c) => c.to_string(),
             };
             Ok(format!("StoppingConditionValue({attr})"))
         }
@@ -177,6 +329,9 @@ pub mod py {
                 }
                 PyStoppingConditionValue::max_function_evaluations(nfe) => {
                     StoppingCondition::MaxFunctionEvaluations(nfe)
+                }
+                PyStoppingConditionValue::hypervolume_change(c) => {
+                    StoppingCondition::HyperVolumeChange(c)
                 }
             }
         }
