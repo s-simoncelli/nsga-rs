@@ -5,3 +5,5 @@ target
 *.a
 .DS_Store
 *.venv*
+# mdBook output
+book/book/

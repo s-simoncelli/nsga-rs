@@ -27,6 +27,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Add log
     env_logger::builder().filter_level(LevelFilter::Info).init();
 
+    // ANCHOR: setup
     let number_objectives: usize = 3;
     // Set the number of variables to use in the DTLZ1 problem
     let k: usize = 5;
@@ -73,6 +74,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Run the algorithm
     algo.run()?;
+    // ANCHOR_END: setup
 
     // Export the last results to a JSON file
     let destination = PathBuf::from(&env::current_dir().unwrap())

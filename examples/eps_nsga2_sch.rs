@@ -36,6 +36,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         info!("Starting example with hyper-box resolution {hyper_box_resolution}");
 
         let problem = SCHProblem::create()?;
+        // ANCHOR: args
         // Setup and run the Eps-NSGA2 algorithm
         let args = EpsNSGA2Arg {
             // set the hyper-box size for the two objectives
@@ -61,6 +62,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         };
         let mut algo = EpsNSGA2::new(Arc::new(problem), args)?;
         algo.run()?;
+        // ANCHOR_END: args
 
         // Export serialised results at last generation
         let out_path = PathBuf::from(&env::current_dir().unwrap())

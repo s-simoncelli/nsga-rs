@@ -3,6 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/nsga_rs.svg)](https://crates.io/crates/nsga_rs)
 [![Documentation](https://docs.rs/nsga_rs/badge.svg)](https://docs.rs/nsga_rs)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
+[![User guide](https://img.shields.io/badge/user%20guide-mdBook-orange.svg)](https://s-simoncelli.github.io/nsga_rs/)
 
 **NSGA RS** is a Rust framework for solving multi-objective optimisation problems using the
 NSGA family of multi-objective evolutionary algorithms (MOEAs). It gives you fast, parallel, and fully serialisable optimisation pipelines — from problem definition through to Pareto-front visualisation.
@@ -123,19 +124,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = NSGA2Arg {
         // use 100 individuals and stop the algorithm at 250 generations
         number_of_individuals: 100,
-        stopping_condition: StoppingConditionType::MaxGeneration(MaxGeneration(250)),
+        stopping_condition: StoppingCondition::MaxGeneration(250),
         // use default options for the SBX and PM operators
         crossover_operator_options: None,
         mutation_operator_options: None,
         // no need to evaluate the objective in parallel
-        threads: NumThreads::None,
+        threads: NumThreads::Off,
         // do not export intermediate solutions
         export_history: None,
         resume_from_file: None,
         // to reproduce results
         seed: Some(10),
     };
-    let mut algo = NSGA2::new(problem, args)?;
+    let mut algo = NSGA2::new(Arc::new(problem), args)?;
     // run the algorithm
     algo.run()?;
 
@@ -165,7 +166,7 @@ All examples live in the [`examples/`](examples/) folder and can be run with `ca
 | `NSGA3`         | Reference-point-based NSGA for many-objective problems                                                      |
 | `AdaptiveNSGA3` | Adaptive variant (Jain & Deb, 2014) for problems where not all reference points intersect the optimal front |
 
-Full API documentation is on [docs.rs](https://docs.rs/optirustic/).
+A step-by-step [user guide](https://s-simoncelli.github.io/nsga_rs/) explains each algorithm and feature. Full API documentation is on [docs.rs](https://docs.rs/nsga_rs/).
 
 ## Stopping Conditions
 
@@ -173,7 +174,7 @@ Runs can be stopped by:
 
 - **`MaxGeneration`** — a fixed number of generations
 - **`MaxFunctionEvaluations`** — a total number of objective evaluations
-- **`Elapsed`** — a wall-clock duration
+- **`MaxDurationAsMinutes` / `MaxDurationAsHours`** — a wall-clock duration
 - **`Any` / `All`** — combine multiple conditions with OR / AND logic
 
 ## Exporting & Resuming
@@ -184,7 +185,7 @@ Set `export_history` in the algorithm args to write JSON snapshots at regular in
 
 With the library, you can:
 
-- plot the Pareto front chart for problems with 2 or 3 objectives from the exported data. Check out the [SCH solved with NSGA2](examples/nsga2_sch.rs) or [DTLZ1 solved with NSGA3](examples/nsga2_dtlz1.rs) or [inverted DTLZ1 solved with Adaptive NSGA3](examples/adaptive_nsga3_inverted_dtlz1).
+- plot the Pareto front chart for problems with 2 or 3 objectives from the exported data. Check out the [SCH solved with NSGA2](examples/nsga2_sch.rs) or [DTLZ1 solved with NSGA3](examples/nsga3_dtlz1.rs) or [inverted DTLZ1 solved with Adaptive NSGA3](examples/adaptive_nsga3_inverted_dtlz1).
 - plot the hyper-volume metric to track convergence using `Hypervolume::plot_from_files`. Check out the [convergence example](examples/convergence.rs).
 
 ## Python Bindings

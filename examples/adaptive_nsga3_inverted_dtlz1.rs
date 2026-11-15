@@ -61,11 +61,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         resume_from_file: None,
     };
 
+    // ANCHOR: init
     // Initialise the algorithm
     let mut algo = AdaptiveNSGA3::new(Arc::new(problem), args).unwrap();
 
     // Run the algorithm
     algo.run()?;
+    // ANCHOR_END: init
 
     // Export the last results to a JSON file
     let destination = PathBuf::from(&env::current_dir().unwrap())
@@ -90,8 +92,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Plot reference points by objective - this are split between the original points
     // and the new adaptive points added by the algorithm
+    // ANCHOR: ref_points
     let ref_points =
         export_data.get_adaptive_nsga3_reference_points(ExportVecGroupBy::Objective)?;
+    // ANCHOR_END: ref_points
     ax.points(
         &ref_points.original[0],
         &ref_points.original[1],

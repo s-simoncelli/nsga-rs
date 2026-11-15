@@ -9,6 +9,7 @@ use nsga_rs::utils::{DasDarren1998, NumberOfPartitions, TwoLayerPartitions};
 fn main() -> Result<(), Box<dyn Error>> {
     // Consider the case of a 3D hyperplane with 3 objectives
     let number_of_objectives = 3;
+    // ANCHOR: layers
     let layers = TwoLayerPartitions {
         // In the first layer points have a gap of 5
         boundary_layer: 5,
@@ -18,6 +19,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
     let partitions = NumberOfPartitions::TwoLayers(layers);
     let m = DasDarren1998::new(number_of_objectives, &partitions)?;
+    // ANCHOR_END: layers
     // This returns the coordinates of the reference points between 0 and 1
     println!("Total points = {:?}", m.number_of_points());
 

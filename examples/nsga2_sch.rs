@@ -29,6 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Load the built-in problem.
     let problem = SCHProblem::create()?;
 
+    // ANCHOR: args
     // Setup and run the NSGA2 algorithm
     let args = NSGA2Arg {
         // use 100 individuals and stop the algorithm at 250 generations
@@ -47,7 +48,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
     let mut algo = NSGA2::new(Arc::new(problem), args)?;
     algo.run()?;
+    // ANCHOR_END: args
 
+    // ANCHOR: export
     // Export serialised results at last generation
     let out_path = PathBuf::from(&env::current_dir().unwrap())
         .join("examples")
@@ -57,6 +60,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Plot the Pareto front using the exported data at the last generation
     let serialised_data = NSGA2::read_json_file(&data_file)?;
     serialised_data.plot_front(&out_path.join("SCH_2obj_NSGA2_Pareto_front.png"), None)?;
+    // ANCHOR_END: export
 
     // Plot the solution chart SCH_2obj_NSGA2_solutions.png
     let export_data: AlgorithmExport = serialised_data.try_into()?;
