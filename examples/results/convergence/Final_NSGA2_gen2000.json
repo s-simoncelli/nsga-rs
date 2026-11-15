@@ -1,0 +1,230 @@
+{
+  "options": {
+    "number_of_individuals": 10,
+    "crossover_operator_options": null,
+    "mutation_operator_options": null,
+    "stopping_condition": {
+      "MaxGeneration": 2000
+    },
+    "resume_from_file": null,
+    "seed": 10,
+    "threads": "Off",
+    "export_history": {
+      "generation_step": 100,
+      "destination": "/Users/stefano/RustroverProjects/nsga-rs/examples/results/convergence"
+    }
+  },
+  "problem": {
+    "objectives": {
+      "(x-2)^2": {
+        "name": "(x-2)^2",
+        "direction": "Minimise"
+      },
+      "x^2": {
+        "name": "x^2",
+        "direction": "Minimise"
+      }
+    },
+    "constraints": {},
+    "variables": {
+      "x": {
+        "name": "x",
+        "min_value": -1000.0,
+        "max_value": 1000.0
+      }
+    },
+    "constraint_names": [],
+    "variable_names": [
+      "x"
+    ],
+    "objective_names": [
+      "x^2",
+      "(x-2)^2"
+    ],
+    "number_of_objectives": 2,
+    "number_of_constraints": 0,
+    "number_of_variables": 1
+  },
+  "individuals": [
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "(x-2)^2": 3.998868721393772,
+        "x^2": 7.999826824792752e-8
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 0.00028283965112396725
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "crowding_distance": 1.7976931348623157e+308,
+        "rank": 1
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "x^2": 4.012671701378953,
+        "(x-2)^2": 0.000010019886139091421
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 2.0031654203732034
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "rank": 1,
+        "crowding_distance": 1.7976931348623157e+308
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "(x-2)^2": 1.7472300194948298,
+        "x^2": 0.459916872733303
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 0.6781717133096182
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "crowding_distance": 0.4855552531556546,
+        "rank": 1
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "x^2": 0.8866366375263073,
+        "(x-2)^2": 1.120181248115606
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 0.9416138473526753
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "crowding_distance": 0.47467704146094963,
+        "rank": 1
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "(x-2)^2": 0.1994119748831533,
+        "x^2": 2.413189256930419
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 1.5534443205118165
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "rank": 1,
+        "crowding_distance": 0.4566364061146611
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "(x-2)^2": 3.146256316344972,
+        "x^2": 0.05118048436688433
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 0.22623104200547794
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "rank": 1,
+        "crowding_distance": 0.4552811755464567
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "(x-2)^2": 2.3851319649238394,
+        "x^2": 0.2075829818091421
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 0.45561275422132563
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "rank": 1,
+        "crowding_distance": 0.4517178066441786
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "(x-2)^2": 0.04862421504535791,
+        "x^2": 3.166588251648328
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 1.7794910091507425
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "crowding_distance": 0.44847257552518277,
+        "rank": 1
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "x^2": 1.7470581462857007,
+        "(x-2)^2": 0.4600050596814806
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 1.321763271651055
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "crowding_distance": 0.39916394449709086,
+        "rank": 1
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "x^2": 1.330475748988417,
+        "(x-2)^2": 0.7166257315068484
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 1.153462504370392
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "rank": 1,
+        "crowding_distance": 0.3795172472945641
+      }
+    }
+  ],
+  "generation": 2000,
+  "number_of_function_evaluations": 20000,
+  "algorithm": "NSGA2",
+  "additional_data": null,
+  "took": {
+    "hours": 0,
+    "minutes": 0,
+    "seconds": 0
+  },
+  "exported_on": "2026-11-15T13:55:13.008765Z"
+}

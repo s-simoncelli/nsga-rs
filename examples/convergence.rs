@@ -39,7 +39,7 @@ fn main() -> Result<(), OError> {
     let export_history = ExportHistory::new(100, &out_path)?;
     let args = NSGA2Arg {
         number_of_individuals: 10,
-        stopping_condition: StoppingCondition::MaxGeneration(1000),
+        stopping_condition: StoppingCondition::MaxGeneration(2000),
         crossover_operator_options: None,
         mutation_operator_options: None,
         threads: NumThreads::Off,
