@@ -96,7 +96,13 @@ impl HyperVolumeChange {
                 .objective_names()
                 .iter()
                 .zip(&self.reference_point)
-                .map(|(name, r)| Ok(if problem.is_objective_minimised(name)? { *r } else { -r }))
+                .map(|(name, r)| {
+                    Ok(if problem.is_objective_minimised(name)? {
+                        *r
+                    } else {
+                        -r
+                    })
+                })
                 .collect::<Result<Vec<f64>, OError>>()?;
             let objectives = ind.get_objective_values()?;
             if objectives.len() != internal_ref.len()

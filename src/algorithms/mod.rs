@@ -1,9 +1,9 @@
 pub use a_nsga3::AdaptiveNSGA3;
+pub(crate) use algorithm::ensure_numeric_variables;
 pub use algorithm::{
     algorithm_options_as_str, Algorithm, AlgorithmExport, AlgorithmSerialisedExport, EvolveStatus,
     ExportHistory, ExportVecGroupBy, NumThreads,
 };
-pub(crate) use algorithm::ensure_numeric_variables;
 pub use eps_nsga2::{
     EpsNSGA2, EpsNSGA2Arg, InterRunStoppingCondition, IntraRunStoppingCondition,
     DISTANCE_FROM_BOX_CORNER, IDENTIFICATION_ARRAY_KEY, SCALED_OBJECTIVE_KEY,

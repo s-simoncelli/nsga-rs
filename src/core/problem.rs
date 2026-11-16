@@ -1318,7 +1318,8 @@ mod test {
             VariableType::Real(BoundedNumber::new("x", 0.0, 1.0).unwrap()),
             VariableType::Integer(BoundedNumber::new("i", 0, 5).unwrap()),
         ];
-        let problem = Arc::new(Problem::new(objectives, variables, None, dummy_evaluator()).unwrap());
+        let problem =
+            Arc::new(Problem::new(objectives, variables, None, dummy_evaluator()).unwrap());
         let mut ind = Individual::new(problem.clone());
         ind.update_variable("i", VariableValue::Integer(3)).unwrap();
         for name in problem.objective_names() {

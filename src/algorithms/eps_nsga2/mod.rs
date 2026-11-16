@@ -1,20 +1,17 @@
 use crate::algorithms::{
     Algorithm, EvolveStatus, ExportHistory, NSGA2Arg, StoppingCondition, NSGA2,
 };
+use crate::core::utils::get_rng;
 use crate::core::{DataValue, Individual, OError};
-use crate::utils::{
-    euclidean_distance, get_pareto_constrained_dominance,
-    PreferredSolution,
-};
+use crate::utils::{euclidean_distance, get_pareto_constrained_dominance, PreferredSolution};
 use data::has_archive_stalled;
 pub use data::{
     EpsNSGA2Arg, InterRunStoppingCondition, IntraRunData, IntraRunStoppingCondition,
     DISTANCE_FROM_BOX_CORNER, IDENTIFICATION_ARRAY_KEY, SCALED_OBJECTIVE_KEY,
 };
-use crate::core::utils::get_rng;
 use log::{debug, info, LevelFilter};
-use rand::RngCore;
 use nsga_rs_macros::{algorithm, algorithm_trait_items};
+use rand::RngCore;
 use rayon::ThreadPool;
 use std::fmt::{Display, Formatter};
 use std::mem;
@@ -327,10 +324,8 @@ impl Algorithm<EpsNSGA2Arg> for EpsNSGA2 {
             let next_population_size = usize::max(10, 4 * self.archive().len());
             let mut population = Population::new_with(self.archive().individuals().to_vec());
             while population.len() < next_population_size {
-                population.add_individual(Individual::new_random(
-                    self.problem.clone(),
-                    &mut self.rng,
-                ));
+                population
+                    .add_individual(Individual::new_random(self.problem.clone(), &mut self.rng));
             }
             population
         };
