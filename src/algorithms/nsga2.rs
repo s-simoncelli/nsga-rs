@@ -840,7 +840,7 @@ mod test_problems {
             threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
-            seed: Some(2),
+            seed: Some(1),
         };
         let mut algo = NSGA2::new(Arc::new(problem), args).unwrap();
         algo.run().unwrap();
@@ -892,7 +892,7 @@ mod test_problems {
             threads: NumThreads::Off,
             export_history: None,
             resume_from_file: None,
-            seed: Some(2),
+            seed: Some(1),
         };
         let mut algo = NSGA2::new(Arc::new(problem), args).unwrap();
         algo.run().unwrap();

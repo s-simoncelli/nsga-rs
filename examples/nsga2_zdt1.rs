@@ -8,7 +8,7 @@ use log::LevelFilter;
 use nsga_rs::algorithms::{Algorithm, NSGA2Arg, NumThreads, StoppingCondition, NSGA2};
 use nsga_rs::core::builtin_problems::ZTD1Problem;
 
-/// Solve the ZDT1 problem (SCH) where the following 2 objectives are minimised:
+/// Solve the ZDT1 problem where the following 2 objectives are minimised:
 /// - `f_1(x) = x_1`
 /// - `f-2(x) = g(x) * [ 1 - sqrt( x_1 / g(x) ) ]`
 /// with
