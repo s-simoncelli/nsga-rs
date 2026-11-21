@@ -204,11 +204,7 @@ mod tests {
         ];
         let y = vec![-1.0, 0.2, 0.9, 2.1];
 
-        let tol = LinearSolverTolerance {
-            relative: 0.1,
-            absolute: 0.1,
-        };
-        let x = solve_linear_system(&x, &y, Some(tol)).unwrap();
+        let x = solve_linear_system(&x, &y, None).unwrap();
         assert_approx_eq!(f64, x[0], 1.0, epsilon = 0.0001);
         assert_approx_eq!(f64, x[1], -0.95, epsilon = 0.0001);
     }

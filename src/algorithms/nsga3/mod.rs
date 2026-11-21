@@ -211,6 +211,7 @@ impl NSGA3 {
         } else {
             "AdaptiveNSGA3".to_string()
         };
+        crate::algorithms::ensure_numeric_variables(&problem, &name)?;
         let nsga3_args = options.clone();
 
         let das_darren = DasDarren1998::new(
@@ -264,6 +265,7 @@ impl NSGA3 {
             );
         }
 
+        let mut rng = get_rng(options.seed);
         let population = if let Some(init_file) = options.resume_from_file {
             info!("Loading initial population from {:?}", init_file);
             NSGA3::seed_population_from_file(
@@ -274,7 +276,7 @@ impl NSGA3 {
             )?
         } else {
             info!("Created initial random population");
-            Population::init(problem.clone(), number_of_individuals)?
+            Population::init(problem.clone(), number_of_individuals, &mut rng)?
         };
 
         let selector_operator = TournamentSelector::<ParetoConstrainedDominance>::new(2);
@@ -309,7 +311,7 @@ impl NSGA3 {
             start_time: Instant::now(),
             thread_pool: Self::build_thread_pool(options.threads)?,
             export_history: options.export_history,
-            rng: get_rng(options.seed),
+            rng,
             args: nsga3_args,
             adaptive,
         })
@@ -731,7 +733,7 @@ mod test_problems {
             resume_from_file: None,
             threads: NumThreads::Off,
             export_history: None,
-            seed: Some(1),
+            seed: Some(5),
         };
 
         let mut algo = NSGA3::new(Arc::new(problem), args, false).unwrap();

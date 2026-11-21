@@ -196,7 +196,11 @@ impl<'a> Normalise<'a> {
         let intercepts: Vec<f64> = plane_coefficients.iter().map(|v| 1.0 / v).collect();
 
         // check that the intercepts are above the minimum threshold
-        if intercepts.iter().all(|v| *v >= 10_f64.powi(-3)) {
+        // a singular system (for example two equal extreme points) gives an infinite intercept
+        if intercepts
+            .iter()
+            .all(|v| v.is_finite() && *v >= 10_f64.powi(-3))
+        {
             Ok(Some(intercepts))
         } else {
             Ok(None)
@@ -251,7 +255,6 @@ mod test {
         assert_approx_array_eq, individuals_from_obj_values_dummy, read_csv_test_file,
     };
     use crate::core::ObjectiveDirection;
-    use crate::utils::LinearSolverTolerance;
 
     #[test]
     /// Test intercepts. Points were generated from numpy from uniform distribution with normal
@@ -271,11 +274,7 @@ mod test {
             vec![6.16815342, 0.66601692, -11.63169056],
         ];
 
-        let tol = LinearSolverTolerance {
-            relative: 0.01,
-            absolute: 0.01,
-        };
-        let intercepts = Normalise::calculate_plane_intercepts(&points, Some(tol))
+        let intercepts = Normalise::calculate_plane_intercepts(&points, None)
             .unwrap()
             .unwrap();
         assert_approx_array_eq(&intercepts, &[3.38096778, 1.61009025, 7.58962871], None);

@@ -1,4 +1,4 @@
-use crate::core::{Individual, OError};
+use crate::core::{DataValue, Individual, OError};
 
 /// The preferred solution returned by `get_pareto_constrained_dominance`.
 #[derive(Debug, PartialOrd, PartialEq)]
@@ -50,33 +50,29 @@ pub fn get_pareto_constrained_dominance(
         }
     }
 
-    // check Pareto dominance using all the objectives (step 2)
-    let mut relation = PreferredSolution::MutuallyPreferred;
-    for (oi, objective_name) in problem.objective_names().iter().enumerate() {
-        let obj_sol1;
-        let obj_sol2;
-        if let Some(data_field_name) = &data_field_name {
-            obj_sol1 = *first_solution
-                .get_data(data_field_name)?
-                .as_f64_vec()?
-                .get(oi)
-                .ok_or(OError::Generic(format!(
-                    "Cannot find data in the first individual for element {}",
-                    oi
-                )))?;
-            obj_sol2 = *second_solution
-                .get_data(data_field_name)?
-                .as_f64_vec()?
-                .get(oi)
-                .ok_or(OError::Generic(format!(
-                    "Cannot find data in the second individual for element {}",
-                    oi
-                )))?;
-        } else {
-            obj_sol1 = first_solution.get_objective_value(objective_name.as_str())?;
-            obj_sol2 = second_solution.get_objective_value(objective_name.as_str())?;
+    // check Pareto dominance using all the objectives (step 2). The values are fetched once
+    // as this is called for every pair of individuals.
+    let number_of_objectives = problem.number_of_objectives();
+    let values = |ind: &Individual, which: &str| -> Result<Vec<f64>, OError> {
+        let Some(name) = &data_field_name else {
+            return ind.get_objective_values();
+        };
+        let DataValue::Vector(v) = ind.get_data(name)? else {
+            return Err(OError::WrongDataType("vector of f64".to_string()));
+        };
+        if v.len() < number_of_objectives {
+            return Err(OError::Generic(format!(
+                "Cannot find data in the {which} individual for element {}",
+                v.len()
+            )));
         }
+        Ok(v)
+    };
+    let values1 = values(first_solution, "first")?;
+    let values2 = values(second_solution, "second")?;
 
+    let mut relation = PreferredSolution::MutuallyPreferred;
+    for (obj_sol1, obj_sol2) in values1.iter().zip(&values2) {
         if obj_sol1 < obj_sol2 {
             // previous objective favours 2nd solution
             if relation == PreferredSolution::Second {

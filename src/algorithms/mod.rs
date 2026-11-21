@@ -1,4 +1,5 @@
 pub use a_nsga3::AdaptiveNSGA3;
+pub(crate) use algorithm::ensure_numeric_variables;
 pub use algorithm::{
     algorithm_options_as_str, Algorithm, AlgorithmExport, AlgorithmSerialisedExport, EvolveStatus,
     ExportHistory, ExportVecGroupBy, NumThreads,

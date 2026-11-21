@@ -292,6 +292,24 @@ mod test {
     }
 
     #[test]
+    /// A positive reference coordinate below the minimum of a maximised objective is valid
+    fn test_maximise_positive_ref_point() {
+        let obj_values = vec![vec![5.0, 2.0], vec![8.0, 3.0]];
+        let mut individuals = individuals_from_obj_values_dummy(
+            &obj_values,
+            &[ObjectiveDirection::Maximise, ObjectiveDirection::Minimise],
+            None,
+        );
+        let hv = HyperVolume2D::new(&mut individuals, &[2.0, 10.0]);
+        // (8 - 2) * (10 - 3) + (5 - 2) * (3 - 2)
+        assert_eq!(hv.unwrap().compute(), 45.0);
+
+        // 6 is above the minimum (5)
+        let hv = HyperVolume2D::new(&mut individuals, &[6.0, 10.0]);
+        assert!(hv.is_err());
+    }
+
+    #[test]
     /// Maximise objective #1
     fn test_maximise_obj_1() {
         let ref_point = [-10.0, 10.0];

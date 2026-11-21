@@ -86,10 +86,41 @@ impl HyperVolumeChange {
             }
         }
 
-        let hv = HyperVolume::from_individuals(
-            &mut population.individuals().to_vec(),
-            &self.reference_point,
-        )?;
+        // points not better than the reference point add no volume, and would make the metric
+        // fail and stop the run with an error: drop them
+        let mut individuals = Vec::new();
+        for ind in population.individuals() {
+            let problem = ind.problem();
+            // stored objectives are negated when maximised: compare with the negated coordinate
+            let internal_ref = problem
+                .objective_names()
+                .iter()
+                .zip(&self.reference_point)
+                .map(|(name, r)| {
+                    Ok(if problem.is_objective_minimised(name)? {
+                        *r
+                    } else {
+                        -r
+                    })
+                })
+                .collect::<Result<Vec<f64>, OError>>()?;
+            let objectives = ind.get_objective_values()?;
+            if objectives.len() != internal_ref.len()
+                || objectives.iter().zip(&internal_ref).all(|(v, r)| v < r)
+            {
+                individuals.push(ind.clone());
+            }
+        }
+        let hv = match individuals.len() {
+            0 => 0.0,
+            _ => {
+                // the metrics need 2 points: a duplicate point adds no volume
+                if individuals.len() == 1 {
+                    individuals.push(individuals[0].clone());
+                }
+                HyperVolume::from_individuals(&mut individuals, &self.reference_point)?
+            }
+        };
         let past = last.replace((generation, hv));
         Ok(match past {
             Some((_, past_hv)) if past_hv != 0.0 => {

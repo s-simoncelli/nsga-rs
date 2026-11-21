@@ -1,11 +1,9 @@
 use crate::algorithms::{
     Algorithm, EvolveStatus, ExportHistory, NSGA2Arg, StoppingCondition, NSGA2,
 };
+use crate::core::utils::get_rng;
 use crate::core::{DataValue, Individual, OError};
-use crate::utils::{
-    euclidean_distance, fast_non_dominated_sort, get_pareto_constrained_dominance,
-    PreferredSolution,
-};
+use crate::utils::{euclidean_distance, get_pareto_constrained_dominance, PreferredSolution};
 use data::has_archive_stalled;
 pub use data::{
     EpsNSGA2Arg, InterRunStoppingCondition, IntraRunData, IntraRunStoppingCondition,
@@ -13,6 +11,7 @@ pub use data::{
 };
 use log::{debug, info, LevelFilter};
 use nsga_rs_macros::{algorithm, algorithm_trait_items};
+use rand::RngCore;
 use rayon::ThreadPool;
 use std::fmt::{Display, Formatter};
 use std::mem;
@@ -55,6 +54,8 @@ pub struct EpsNSGA2 {
     /// Copy of `history_export` to prevent `Algorithm` to export data as this is done
     /// by the `after_evolve` closure.
     _export_history: Option<ExportHistory>,
+    /// The random number generator used to create new individuals.
+    rng: Box<dyn RngCore>,
     /// Whether to enable the inter-run stopping condition.
     inter_run_stopping_condition: InterRunStoppingCondition,
 }
@@ -70,6 +71,7 @@ impl EpsNSGA2 {
     /// returns: `NSGA2`.
     pub fn new(problem: Arc<Problem>, options: EpsNSGA2Arg) -> Result<Self, OError> {
         let name = "EpsNSGA2".to_string();
+        crate::algorithms::ensure_numeric_variables(&problem, &name)?;
         let number_of_initial_individuals = options.number_of_initial_individuals.unwrap_or(10);
         if number_of_initial_individuals < 5 {
             return Err(OError::AlgorithmInit(
@@ -87,6 +89,7 @@ impl EpsNSGA2 {
         let eps_nsga2_args = options.clone();
 
         // init population and individual's box data
+        let mut rng = get_rng(options.seed);
         let population = if let Some(init_file) = options.resume_from_file {
             info!("Loading initial population from {:?}", init_file);
             let data = Self::read_json_file(&init_file)?;
@@ -98,7 +101,7 @@ impl EpsNSGA2 {
             )?
         } else {
             info!("Created initial random population");
-            Population::init(problem.clone(), number_of_initial_individuals)?
+            Population::init(problem.clone(), number_of_initial_individuals, &mut rng)?
         };
 
         // Init other options
@@ -161,15 +164,16 @@ impl EpsNSGA2 {
             // closure via `_export_history`.
             export_history: None,
             _export_history: options.export_history,
+            rng,
             args: eps_nsga2_args,
         })
     }
 
     /// Set the NSGA2 to an even number as this is a NSGA2 requirement. This adds a new
     /// individual.
-    fn adjust_nsga2_population(&self, population: &mut Population) {
+    fn adjust_nsga2_population(&mut self, population: &mut Population) {
         if population.len() % 2 != 0 {
-            population.add_individual(Individual::new(self.problem.clone()));
+            population.add_individual(Individual::new_random(self.problem.clone(), &mut self.rng));
         }
     }
 
@@ -194,11 +198,8 @@ impl EpsNSGA2 {
     ///
     /// returns: `Result<(), OError>`
     fn set_box_data(individual: &mut Individual, eps: &[f64]) -> Result<(), OError> {
-        // skip if individuals has the data already
-        if individual.get_data(IDENTIFICATION_ARRAY_KEY).is_ok() {
-            return Ok(());
-        }
-
+        // always recompute (it is cheap): individuals resumed from a file may carry box data
+        // from a run with a different eps
         let mut b_vector = vec![];
         let mut obj_box_coords = vec![];
         for (j, f_j) in individual.get_objective_values()?.iter().enumerate() {
@@ -294,11 +295,8 @@ impl Algorithm<EpsNSGA2Arg> for EpsNSGA2 {
             &mut self.nfe,
             &self.thread_pool,
         )?;
-        debug!("Calculating rank");
-        fast_non_dominated_sort(self.population.individuals_as_mut(), false, None)?;
-
-        debug!("Calculating crowding distance");
-        NSGA2::set_crowding_distance(self.population.individuals_as_mut())?;
+        debug!("Calculating rank and crowding distance");
+        self.population = NSGA2::rank_and_crowd(&mut self.population)?;
 
         // assign the hyper-box data after objective evaluation
         if self.generation() == 0 {
@@ -326,7 +324,8 @@ impl Algorithm<EpsNSGA2Arg> for EpsNSGA2 {
             let next_population_size = usize::max(10, 4 * self.archive().len());
             let mut population = Population::new_with(self.archive().individuals().to_vec());
             while population.len() < next_population_size {
-                population.add_individual(Individual::new(self.problem.clone()));
+                population
+                    .add_individual(Individual::new_random(self.problem.clone(), &mut self.rng));
             }
             population
         };
@@ -361,7 +360,7 @@ impl Algorithm<EpsNSGA2Arg> for EpsNSGA2 {
                 seed: self
                     .algorithm_options()
                     .seed
-                    .map(|s| s + self.generation as u64),
+                    .map(|s| s.wrapping_add(u64::from(self.generation))),
                 threads: self.algorithm_options().threads,
                 export_history: None,
             };
@@ -392,7 +391,7 @@ impl Algorithm<EpsNSGA2Arg> for EpsNSGA2 {
 
                 // export data
                 if let Some(export) = &self._export_history {
-                    if self.history_gen_step == export.generation_step - 1 {
+                    if self.history_gen_step + 1 >= export.generation_step {
                         self.save_to_json(&export.destination, None)?;
                         self.history_gen_step = 0;
                     } else {

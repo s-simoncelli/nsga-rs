@@ -3,15 +3,15 @@
     "number_of_individuals": 10,
     "crossover_operator_options": null,
     "mutation_operator_options": null,
+    "stopping_condition": {
+      "MaxGeneration": 2000
+    },
     "resume_from_file": null,
     "seed": 10,
-    "stopping_condition": {
-      "MaxGeneration": 1000
-    },
     "threads": "Off",
     "export_history": {
       "generation_step": 100,
-      "destination": "/Users/stefano/RustroverProjects/GA/examples/results/convergence"
+      "destination": "/Users/stefano/RustroverProjects/nsga-rs/examples/results/convergence"
     }
   },
   "problem": {
@@ -49,175 +49,176 @@
     {
       "constraint_values": {},
       "objective_values": {
-        "(x-2)^2": 4.07377779354532,
-        "x^2": 0.0003370960034646484
+        "x^2": 4.012671701378953,
+        "(x-2)^2": 0.000010019886139091421
       },
-      "constraint_violation": 0.0,
+      "constraint_violation": -0.0,
       "variable_values": {
-        "x": -0.018360174385464
-      },
-      "is_feasible": true,
-      "evaluated": true,
-      "data": {
-        "crowding_distance": 1.7976931348623157e308,
-        "rank": 1
-      }
-    },
-    {
-      "constraint_values": {},
-      "objective_values": {
-        "(x-2)^2": 0.00029005232231443903,
-        "x^2": 4.068413742453068
-      },
-      "constraint_violation": 0.0,
-      "variable_values": {
-        "x": 2.0170309225326886
-      },
-      "is_feasible": true,
-      "evaluated": true,
-      "data": {
-        "crowding_distance": 1.7976931348623157e308,
-        "rank": 1
-      }
-    },
-    {
-      "constraint_values": {},
-      "objective_values": {
-        "(x-2)^2": 0.10025048761195492,
-        "x^2": 2.8337561916156093
-      },
-      "constraint_violation": 0.0,
-      "variable_values": {
-        "x": 1.6833764260009136
+        "x": 2.0031654203732034
       },
       "is_feasible": true,
       "evaluated": true,
       "data": {
         "rank": 1,
-        "crowding_distance": 0.5010039238789844
+        "crowding_distance": 1.7976931348623157e+308
       }
     },
     {
       "constraint_values": {},
       "objective_values": {
-        "x^2": 0.5048468854697011,
-        "(x-2)^2": 1.662743761458326
+        "(x-2)^2": 3.8177134570189204,
+        "x^2": 0.002125487307190106
       },
-      "constraint_violation": 0.0,
+      "constraint_violation": -0.0,
       "variable_values": {
-        "x": 0.7105257810028438
+        "x": 0.04610300757206742
       },
       "is_feasible": true,
       "evaluated": true,
       "data": {
-        "crowding_distance": 0.437835710733327,
+        "crowding_distance": 1.7976931348623157e+308,
         "rank": 1
       }
     },
     {
       "constraint_values": {},
       "objective_values": {
-        "(x-2)^2": 3.1652135313224514,
-        "x^2": 0.048794733840165604
+        "x^2": 0.2749414445989884,
+        "(x-2)^2": 2.1775470816848954
       },
-      "constraint_violation": 0.0,
+      "constraint_violation": -0.0,
       "variable_values": {
-        "x": 0.22089530062942853
+        "x": 0.5243485907285232
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "crowding_distance": 0.5129855536349968,
+        "rank": 1
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "x^2": 0.5951621154598232,
+        "(x-2)^2": 1.5092920846002649
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 0.7714675077148896
       },
       "is_feasible": true,
       "evaluated": true,
       "data": {
         "rank": 1,
-        "crowding_distance": 0.4783833804317272
+        "crowding_distance": 0.5026156943163687
       }
     },
     {
       "constraint_values": {},
       "objective_values": {
-        "x^2": 0.8361524104689805,
-        "(x-2)^2": 1.1784976198273476
+        "(x-2)^2": 2.9734878127049535,
+        "x^2": 0.07596615610399315
       },
-      "constraint_violation": 0.0,
+      "constraint_violation": -0.0,
       "variable_values": {
-        "x": 0.9144136976604083
+        "x": 0.2756195858497599
       },
       "is_feasible": true,
       "evaluated": true,
       "data": {
         "rank": 1,
-        "crowding_distance": 0.4072095757634293
+        "crowding_distance": 0.49764585009808426
       }
     },
     {
       "constraint_values": {},
       "objective_values": {
-        "x^2": 2.2723146070660682,
-        "(x-2)^2": 0.24263520322898757
+        "(x-2)^2": 0.03911430087858849,
+        "x^2": 3.248020871467488
       },
-      "constraint_violation": 0.0,
+      "constraint_violation": -0.0,
       "variable_values": {
-        "x": 1.5074198509592702
+        "x": 1.8022266426472249
       },
       "is_feasible": true,
       "evaluated": true,
       "data": {
         "rank": 1,
-        "crowding_distance": 0.3840619655134318
+        "crowding_distance": 0.42445402977075586
       }
     },
     {
       "constraint_values": {},
       "objective_values": {
-        "(x-2)^2": 0.5003508447711674,
-        "x^2": 1.6709315551750357
+        "x^2": 1.026352780628473,
+        "(x-2)^2": 0.9739899525915303
       },
-      "constraint_violation": 0.0,
+      "constraint_violation": -0.0,
       "variable_values": {
-        "x": 1.292645177600967
+        "x": 1.0130907070092356
       },
       "is_feasible": true,
       "evaluated": true,
       "data": {
-        "crowding_distance": 0.3758852694241361,
+        "rank": 1,
+        "crowding_distance": 0.40954398138892845
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "x^2": 2.4958365200861508,
+        "(x-2)^2": 0.17654982605347597
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 1.5798216735081687
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "rank": 1,
+        "crowding_distance": 0.4590425766466629
+      }
+    },
+    {
+      "constraint_values": {},
+      "objective_values": {
+        "(x-2)^2": 0.6860880228404501,
+        "x^2": 1.3728708000421619
+      },
+      "constraint_violation": -0.0,
+      "variable_values": {
+        "x": 1.171695694300428
+      },
+      "is_feasible": true,
+      "evaluated": true,
+      "data": {
+        "crowding_distance": 0.33979297607695835,
         "rank": 1
       }
     },
     {
       "constraint_values": {},
       "objective_values": {
-        "x^2": 1.2655431629549723,
-        "(x-2)^2": 0.7656886533869622
+        "(x-2)^2": 0.42658297084841407,
+        "x^2": 1.8140501895086996
       },
-      "constraint_violation": 0.0,
+      "constraint_violation": -0.0,
       "variable_values": {
-        "x": 1.1249636273920025
+        "x": 1.3468668046650714
       },
       "is_feasible": true,
       "evaluated": true,
       "data": {
-        "crowding_distance": 0.37168058078233485,
-        "rank": 1
-      }
-    },
-    {
-      "constraint_values": {},
-      "objective_values": {
-        "(x-2)^2": 2.34475999435461,
-        "x^2": 0.21971632841444305
-      },
-      "constraint_violation": 0.0,
-      "variable_values": {
-        "x": 0.4687390835149583
-      },
-      "is_feasible": true,
-      "evaluated": true,
-      "data": {
-        "crowding_distance": 0.4809462203616694,
-        "rank": 1
+        "rank": 1,
+        "crowding_distance": 0.4134703888775827
       }
     }
   ],
   "generation": 800,
+  "number_of_function_evaluations": 8000,
   "algorithm": "NSGA2",
   "additional_data": null,
   "took": {
@@ -225,5 +226,5 @@
     "minutes": 0,
     "seconds": 0
   },
-  "exported_on": "2024-08-12T06:57:17.589027Z"
+  "exported_on": "2026-11-15T13:55:12.871044Z"
 }

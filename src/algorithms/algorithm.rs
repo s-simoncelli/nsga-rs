@@ -9,7 +9,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::fs::read_dir;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{Instant, SystemTime};
+use std::time::Instant;
 use std::{fmt, fs};
 
 #[cfg(feature = "python")]
@@ -22,8 +22,7 @@ use pyo3::prelude::*;
 
 use crate::algorithms::StoppingCondition;
 use crate::core::{
-    DataValue, Individual, IndividualExport, OError, ObjectiveDirection, Population, Problem,
-    ProblemExport,
+    DataValue, Individual, IndividualExport, OError, Population, Problem, ProblemExport,
 };
 
 /// The struct to configure the number of threads. This can be set to the maximum available
@@ -96,26 +95,9 @@ impl<T: Serialize> AlgorithmSerialisedExport<T> {
     /// returns: `Result<Vec<Individual>, OError>`
     pub fn individuals(&self) -> Result<Vec<Individual>, OError> {
         let problem = Arc::new(self.problem()?);
-        let mut individuals: Vec<Individual> = vec![];
-        for individual_data in &self.individuals {
-            let mut ind = Individual::new(problem.clone());
-            for (name, value) in &individual_data.objective_values {
-                ind.update_objective(name, *value)?;
-            }
-            for (name, value) in &individual_data.constraint_values {
-                ind.update_constraint(name, *value)?;
-            }
-            for (name, value) in &individual_data.variable_values {
-                ind.update_variable(name, value.clone())?;
-            }
-            for (name, value) in &individual_data.data {
-                ind.set_data(name, value.clone());
-            }
-            ind.set_evaluated();
-            individuals.push(ind);
-        }
-
-        Ok(individuals)
+        Ok(Population::deserialise(&self.individuals, problem)?
+            .individuals()
+            .to_vec())
     }
 
     #[cfg(feature = "plotting")]
@@ -152,19 +134,21 @@ impl<T: Serialize> AlgorithmSerialisedExport<T> {
         let point_style = [PointSymbol('O'), Color("black".into())];
 
         if obj_count >= 2 && obj_count <= 3 {
-            let obj1_name = obj_names.get(0).unwrap();
-            let obj2_name = obj_names.get(1).unwrap();
-
-            let obj1: Vec<f64> = self
-                .individuals()?
-                .iter()
-                .map(|i| i.get_objective_value(obj1_name).unwrap())
-                .collect();
-            let obj2: Vec<f64> = self
-                .individuals()?
-                .iter()
-                .map(|i| i.get_objective_value(obj2_name).unwrap())
-                .collect();
+            // the serialised values are in the user's sign (not negated for maximised objectives)
+            let column = |name: &String| -> Result<Vec<f64>, OError> {
+                self.individuals
+                    .iter()
+                    .map(|i| {
+                        i.objective_values.get(name).copied().ok_or_else(|| {
+                            OError::Generic(format!("The objective '{name}' is missing"))
+                        })
+                    })
+                    .collect()
+            };
+            let obj1_name = &obj_names[0];
+            let obj2_name = &obj_names[1];
+            let obj1 = column(obj1_name)?;
+            let obj2 = column(obj2_name)?;
 
             if obj_count == 2 {
                 fg.axes2d()
@@ -175,12 +159,8 @@ impl<T: Serialize> AlgorithmSerialisedExport<T> {
                     .set_y_grid(true)
                     .set_title(&title, &[]);
             } else {
-                let obj3_name = obj_names.get(2).unwrap();
-                let obj3: Vec<f64> = self
-                    .individuals()?
-                    .iter()
-                    .map(|i| i.get_objective_value(obj3_name).unwrap())
-                    .collect();
+                let obj3_name = &obj_names[2];
+                let obj3 = column(obj3_name)?;
                 fg.axes3d()
                     .points(obj1, obj2, obj3, &point_style)
                     .set_x_label(obj1_name, &[])
@@ -362,24 +342,8 @@ impl AlgorithmExport {
 
         let results = match group_by {
             ExportVecGroupBy::Individual => all_normalised_objectives_per_ind,
-            //  self.group_by_objective(all_normalised_objectives_per_ind)?
             ExportVecGroupBy::Objective => {
-                let mut all_normalised_objectives =
-                    vec![vec![]; self.problem.number_of_objectives()];
-                for ind_objectives in all_normalised_objectives_per_ind.into_iter() {
-                    for obj_num in 0..self.problem.number_of_objectives() {
-                        let value = ind_objectives.get(obj_num);
-                        match value {
-                            Some(v) => all_normalised_objectives[obj_num].push(v.clone()),
-                            None => {
-                                return Err(OError::Generic(format!(
-                                    "Cannot group objective {obj_num}"
-                                )));
-                            }
-                        }
-                    }
-                }
-                all_normalised_objectives
+                self.group_by_objective(all_normalised_objectives_per_ind)?
             }
         };
         Ok(results)
@@ -456,14 +420,14 @@ impl AlgorithmExport {
         let mut ref_points = self.get_nsga3_reference_points(ExportVecGroupBy::Individual)?;
         // split using the original number of points
         let original_point_count = match self.additional_data.get("number_of_reference_points") {
-            Some(count) => count.as_real()?, // NOTE: this is deserialised as real
+            Some(count) => count.as_usize()?,
             None => {
                 return Err(OError::Generic(
                     "Cannot find additional_data.number_of_reference_points".to_string(),
                 ))
             }
         };
-        let adaptive_points = ref_points.split_off(original_point_count as usize);
+        let adaptive_points = ref_points.split_off(original_point_count);
 
         let result = match group_by {
             ExportVecGroupBy::Individual => ReferencePointType {
@@ -517,6 +481,11 @@ impl ExportHistory {
     ///
     /// returns: `Result<ExportHistory, OError>`
     pub fn new(generation_step: usize, destination: &PathBuf) -> Result<Self, OError> {
+        if generation_step == 0 {
+            return Err(OError::Generic(
+                "The generation step must be larger than 0".to_string(),
+            ));
+        }
         if !destination.exists() {
             return Err(OError::Generic(format!(
                 "The destination folder '{:?}' does not exist",
@@ -551,6 +520,30 @@ impl ExportHistory {
     fn py_new(generation_step: usize, destination: PathBuf) -> PyResult<Self> {
         ExportHistory::new(generation_step, &destination)
             .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+}
+
+/// Return an error if the problem has a variable that is not a real or integer number. The
+/// built-in SBX and PM operators only support numbers, so this catches the problem before the
+/// first (possibly slow) evaluation.
+///
+/// # Arguments
+///
+/// * `problem`: The problem being solved.
+/// * `name`: The algorithm name.
+///
+/// returns: `Result<(), OError>`
+pub(crate) fn ensure_numeric_variables(problem: &Problem, name: &str) -> Result<(), OError> {
+    match problem
+        .variables()
+        .into_iter()
+        .find(|(_, v)| !(v.is_real() | v.is_integer()))
+    {
+        Some((var_name, _)) => Err(OError::AlgorithmInit(
+            name.to_string(),
+            format!("The variable '{var_name}' is not a real or integer number. Only these types are supported by the crossover and mutation operators"),
+        )),
+        None => Ok(()),
     }
 }
 
@@ -761,10 +754,7 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
     ///
     /// returns: `u32`
     fn count_unevaluated(individuals: &[Individual]) -> u32 {
-        individuals
-            .iter()
-            .filter_map(|i| if !i.is_evaluated() { Some(1) } else { None })
-            .sum()
+        individuals.iter().filter(|i| !i.is_evaluated()).count() as u32
     }
     /// Run the algorithm.
     ///
@@ -778,11 +768,10 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
         }
 
         let mut history_gen_step: usize = 0;
-        let mut avg_time = 0.0;
         'gen_loop: loop {
             // Export history
             if let Some(export) = self.export_history() {
-                if history_gen_step == export.generation_step - 1 {
+                if history_gen_step + 1 >= export.generation_step {
                     self.save_to_json(&export.destination, None)?;
                     history_gen_step = 0;
                 } else {
@@ -793,15 +782,7 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
             // Evolve population
             info!("Generation #{}", self.generation());
 
-            let mut terminate = false;
-            let now = SystemTime::now();
-            if matches!(self.evolve()?, EvolveStatus::Stop) {
-                terminate = true;
-            }
-
-            if let Result::Ok(elapsed) = now.elapsed() {
-                avg_time = (avg_time + elapsed.as_secs_f64()) / 2.0;
-            }
+            let mut terminate = matches!(self.evolve()?, EvolveStatus::Stop);
             info!(
                 "Evolved generation #{} - Elapsed Time: {}",
                 self.generation(),
@@ -811,25 +792,32 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
             // Termination - skip if early termination is returned by evolve()
             if !terminate {
                 // print time left. For vectorial stopping condition this cannot be calculated
-                match self.stopping_condition() {
+                let elapsed = self.start_time().elapsed();
+                let left = match self.stopping_condition() {
                     StoppingCondition::MaxDurationAsMinutes(max_t) => {
-                        let left = max_t * 60 - self.start_time().elapsed().as_secs() as u32;
-                        info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                        Some((u64::from(*max_t) * 60).saturating_sub(elapsed.as_secs()))
                     }
                     StoppingCondition::MaxDurationAsHours(max_t) => {
-                        let left = max_t * 60 * 24 - self.start_time().elapsed().as_secs() as u32;
-                        info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                        Some((u64::from(*max_t) * 3600).saturating_sub(elapsed.as_secs()))
                     }
-                    StoppingCondition::MaxGeneration(gen) => {
-                        let left = (gen - self.generation()) as f64 * avg_time;
-                        info!("Approximate time left: {}", elapsed_as_string(left as u64));
+                    // extrapolate from the average speed so far
+                    StoppingCondition::MaxGeneration(gen) if self.generation() > 0 => Some(
+                        (f64::from(gen.saturating_sub(self.generation())) * elapsed.as_secs_f64()
+                            / f64::from(self.generation())) as u64,
+                    ),
+                    StoppingCondition::MaxFunctionEvaluations(nfe)
+                        if self.number_of_function_evaluations() > 0 =>
+                    {
+                        let done = self.number_of_function_evaluations();
+                        Some(
+                            (f64::from(nfe.saturating_sub(done)) * elapsed.as_secs_f64()
+                                / f64::from(done)) as u64,
+                        )
                     }
-                    StoppingCondition::MaxFunctionEvaluations(nfe) => {
-                        let left = (nfe - self.number_of_function_evaluations()) as f64 * avg_time
-                            / self.number_of_function_evaluations() as f64;
-                        info!("Approximate time left: {}", elapsed_as_string(left as u64));
-                    }
-                    _ => {}
+                    _ => None,
+                };
+                if let Some(left) = left {
+                    info!("Approximate time left: {}", elapsed_as_string(left));
                 }
 
                 let cond = self.stopping_condition();
@@ -1014,22 +1002,13 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
             )
         })?;
 
-        let mut history: AlgorithmSerialisedExport<AlgorithmOptions> =
-            serde_json::from_reader(data).map_err(|e| {
+        let history: AlgorithmSerialisedExport<AlgorithmOptions> = serde_json::from_reader(data)
+            .map_err(|e| {
                 OError::File(
                     file.to_path_buf(),
                     format!("cannot parse the JSON file because: {e}"),
                 )
             })?;
-
-        // invert sign of maximised objective values
-        for ind in &mut history.individuals {
-            for (name, value) in ind.objective_values.iter_mut() {
-                if history.problem.objectives[name].direction() == ObjectiveDirection::Maximise {
-                    *value *= -1.0;
-                }
-            }
-        }
 
         Ok(history)
     }
@@ -1052,8 +1031,8 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
             .filter_map(|path| {
                 if path.extension().map_or(false, |ext| ext == "json")
                     & path.file_name().map_or(false, |name| {
-                        name.to_str().unwrap().starts_with("History_")
-                            | name.to_str().unwrap().starts_with("Final_")
+                        let name = name.to_string_lossy();
+                        name.starts_with("History_") | name.starts_with("Final_")
                     })
                 {
                     Some(path)
@@ -1110,8 +1089,8 @@ pub trait Algorithm<AlgorithmOptions: Serialize + DeserializeOwned>: Display {
                 format!(
                     "The number of individuals from the history file ({}) does not \
                     match the population size ({}) used in the algorithm",
-                    data.problem.variables.len(),
-                    problem.number_of_variables()
+                    data.individuals.len(),
+                    expected_individuals
                 ),
             ));
         }
@@ -1419,10 +1398,18 @@ mod test {
     use std::path::Path;
     use std::sync::Arc;
 
+    use std::collections::HashMap;
+    use std::error::Error;
+    use std::fs;
+
     use crate::algorithms::{
-        Algorithm, HyperVolumeChange, NSGA2Arg, NumThreads, StoppingCondition, NSGA2,
+        Algorithm, ExportHistory, HyperVolumeChange, NSGA2Arg, NumThreads, StoppingCondition, NSGA2,
     };
     use crate::core::builtin_problems::{SCHProblem, ZTD1Problem};
+    use crate::core::{
+        BoundedNumber, EvaluationResult, Evaluator, Individual, Objective, ObjectiveDirection,
+        Problem, VariableType,
+    };
 
     #[test]
     /// Test seed_population_from_file
@@ -1569,6 +1556,88 @@ mod test {
 
         assert!(results.generation > 5);
         assert!(results.generation < 500);
+    }
+
+    fn sch_args(seed: Option<u64>) -> NSGA2Arg {
+        NSGA2Arg {
+            number_of_individuals: 10,
+            stopping_condition: StoppingCondition::MaxGeneration(5),
+            crossover_operator_options: None,
+            mutation_operator_options: None,
+            threads: NumThreads::Off,
+            export_history: None,
+            resume_from_file: None,
+            seed,
+        }
+    }
+
+    #[test]
+    /// The same seed must give the same results.
+    fn test_seed_is_reproducible() {
+        let run = || {
+            let problem = Arc::new(SCHProblem::create().unwrap());
+            let mut algo = NSGA2::new(problem, sch_args(Some(1))).unwrap();
+            algo.run().unwrap();
+            algo.get_results().get_objective("x^2").unwrap()
+        };
+        assert_eq!(run(), run());
+    }
+
+    #[test]
+    /// A maximised objective keeps its sign after a save and load.
+    fn test_maximised_objective_round_trip() {
+        #[derive(Debug)]
+        struct MaxEvaluator;
+        impl Evaluator for MaxEvaluator {
+            fn evaluate(&self, i: &Individual) -> Result<EvaluationResult, Box<dyn Error>> {
+                let x = i.get_real_value("x")?;
+                let objectives = HashMap::from([("f".to_string(), x), ("g".to_string(), x * x)]);
+                Ok(EvaluationResult {
+                    constraints: None,
+                    objectives,
+                })
+            }
+        }
+        let problem = Problem::new(
+            vec![
+                Objective::new("f", ObjectiveDirection::Maximise),
+                Objective::new("g", ObjectiveDirection::Minimise),
+            ],
+            vec![VariableType::Real(
+                BoundedNumber::new("x", 1.0, 2.0).unwrap(),
+            )],
+            None,
+            Box::new(MaxEvaluator),
+        )
+        .unwrap();
+        let mut algo = NSGA2::new(Arc::new(problem), sch_args(Some(1))).unwrap();
+        algo.run().unwrap();
+        let live = algo.get_results().get_objective("f").unwrap();
+
+        let out = env::temp_dir().join(format!("nsga_rs_round_trip_{}", std::process::id()));
+        fs::create_dir_all(&out).unwrap();
+        let file = algo.save_to_json(&out, None).unwrap();
+        let loaded = NSGA2::read_json_file(&file).unwrap();
+        let _ = fs::remove_dir_all(&out);
+
+        let reloaded: Vec<f64> = loaded
+            .individuals()
+            .unwrap()
+            .iter()
+            .map(|i| i.get_objective_value("f").unwrap())
+            .collect();
+        // JSON may lose the last bit of a float
+        for (l, r) in live.iter().zip(&reloaded) {
+            assert!((l - r).abs() < 1e-12, "{l} != {r}");
+        }
+        // the file stores the user's value, which is positive here
+        assert!(loaded.individuals[0].objective_values["f"] > 0.0);
+    }
+
+    #[test]
+    /// A generation step of 0 is rejected.
+    fn test_export_history_zero_step() {
+        assert!(ExportHistory::new(0, &env::temp_dir()).is_err());
     }
 }
 

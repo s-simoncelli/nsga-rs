@@ -18,7 +18,7 @@ NSGA family of multi-objective evolutionary algorithms (MOEAs). It gives you fas
 
 - **Three built-in algorithms** — `NSGA2` ([Deb et al, 2002](https://doi.org/10.1109/4235.996017)), `NSGA3` ([Deb & Jain, 2014](https://10.1109/TEVC.2013.2281535)), and `AdaptiveNSGA3` ([Jain et al, 2014](doi.org/10.1109/TEVC.2013.2281534))
 - **Flexible problem definition** — minimise or maximise any number of objectives; constrained or unconstrained
-- **Rich variable types** — real, integer, boolean, and categorical (choice) variables, each with optional bounds
+- **Variable types** — bounded real and integer variables (boolean and choice variables can be defined, but the built-in SBX and PM operators do not support them)
 - **Parallel evaluation** — multi-threaded objective and constraint evaluation via Rayon
 - **Resumable runs** — export the full population history as JSON and resume from any checkpoint
 - **Python bindings** — exposes a PyO3 interface so you can wrap the library in your own Python package

@@ -88,7 +88,6 @@ impl<Operator: BinaryComparisonOperator> Selector for TournamentSelector<Operato
         individuals: &[Individual],
         rng: &mut dyn RngCore,
     ) -> Result<Individual, OError> {
-        // let population = population.lock().unwrap();
         if individuals.is_empty() {
             return Err(OError::SelectorOperator(
                 "BinaryComparisonOperator".to_string(),
@@ -103,7 +102,7 @@ impl<Operator: BinaryComparisonOperator> Selector for TournamentSelector<Operato
         }
         let mut winner = individuals.choose(rng).unwrap();
 
-        for _ in 0..self.number_of_competitors {
+        for _ in 1..self.number_of_competitors {
             let potential_winner = individuals.choose(rng).unwrap();
             let preferred_sol = Operator::compare(winner, potential_winner)?;
             if preferred_sol == PreferredSolution::Second {

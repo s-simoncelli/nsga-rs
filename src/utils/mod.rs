@@ -92,9 +92,10 @@ pub fn all_close(a: &[f64], b: &[f64], r_tol: Option<f64>, a_tol: Option<f64>) -
     let r_tol = r_tol.unwrap_or(1e-05);
     let a_tol = a_tol.unwrap_or(1e-08);
 
-    a.iter()
-        .zip(b)
-        .any(|(v1, v2)| (v1 - v2).abs() <= (a_tol + r_tol * v2.abs()))
+    a.len() == b.len()
+        && a.iter()
+            .zip(b)
+            .all(|(v1, v2)| (v1 - v2).abs() <= (a_tol + r_tol * v2.abs()))
 }
 
 /// Return the index of the minimum values of the vector.

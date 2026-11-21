@@ -1,6 +1,5 @@
 use rand::distr::uniform::SampleUniform;
-use rand::prelude::{IndexedRandom, IteratorRandom};
-use rand::Rng;
+use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
@@ -14,7 +13,7 @@ use crate::core::{OError, Problem};
 /// A trait to define a decision variable.
 pub trait Variable<T>: Display {
     /// Generate a new random value for the variable.
-    fn generate(&self) -> T;
+    fn generate(&self, rng: &mut dyn RngCore) -> T;
     /// Get the variable name
     fn name(&self) -> String;
 }
@@ -84,8 +83,7 @@ impl<N: BoundedNumberTrait> BoundedNumber<N> {
 
 impl<N: BoundedNumberTrait + Copy> Variable<N> for BoundedNumber<N> {
     /// Randomly generate a new bounded number.
-    fn generate(&self) -> N {
-        let mut rng = rand::rng();
+    fn generate(&self, rng: &mut dyn RngCore) -> N {
         rng.random_range(self.min_value..=self.max_value)
     }
     fn name(&self) -> String {
@@ -135,9 +133,8 @@ impl Variable<bool> for Boolean {
     /// Randomly generate a boolean value.
     ///
     /// return: `bool`
-    fn generate(&self) -> bool {
-        let mut rng = rand::rng();
-        !matches!([0, 1].choose(&mut rng).unwrap(), 0)
+    fn generate(&self, rng: &mut dyn RngCore) -> bool {
+        rng.random_bool(0.5)
     }
     fn name(&self) -> String {
         self.name.clone()
@@ -179,10 +176,8 @@ impl Display for Choice {
 
 impl Variable<String> for Choice {
     /// Randomly pick a choice.
-    fn generate(&self) -> String {
-        let mut rng = rand::rng();
-        let choice_index = (0..self.choices.len()).choose(&mut rng).unwrap();
-        self.choices[choice_index].clone()
+    fn generate(&self, rng: &mut dyn RngCore) -> String {
+        self.choices[rng.random_range(0..self.choices.len())].clone()
     }
 
     fn name(&self) -> String {
@@ -194,11 +189,13 @@ impl Variable<String> for Choice {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 #[cfg_attr(feature = "python", derive(IntoPyObject))]
+// Integer must come before Real. f64 values are always written with a decimal point and
+// fail as i64.
 pub enum VariableType {
-    /// A continuous bounded variable (f64)
-    Real(BoundedNumber<f64>),
     /// A discrete bounded variable (i64)
     Integer(BoundedNumber<i64>),
+    /// A continuous bounded variable (f64)
+    Real(BoundedNumber<f64>),
     /// A boolean variable
     Boolean(Boolean),
     /// A variable representing a choice (as string)
@@ -209,12 +206,12 @@ impl VariableType {
     /// Generate a new random variable value based on its type.
     ///
     /// returns: `VariableValue`
-    pub fn generate_random_value(&self) -> VariableValue {
+    pub fn generate_random_value(&self, rng: &mut dyn RngCore) -> VariableValue {
         match &self {
-            VariableType::Real(v) => VariableValue::Real(v.generate()),
-            VariableType::Integer(v) => VariableValue::Integer(v.generate()),
-            VariableType::Boolean(v) => VariableValue::Boolean(v.generate()),
-            VariableType::Choice(v) => VariableValue::Choice(v.generate()),
+            VariableType::Real(v) => VariableValue::Real(v.generate(rng)),
+            VariableType::Integer(v) => VariableValue::Integer(v.generate(rng)),
+            VariableType::Boolean(v) => VariableValue::Boolean(v.generate(rng)),
+            VariableType::Choice(v) => VariableValue::Choice(v.generate(rng)),
         }
     }
 
@@ -271,11 +268,12 @@ impl Display for VariableType {
 #[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "python", pyclass(from_py_object), derive(IntoPyObjectRef))]
 #[serde(untagged)]
+// Integer must come before Real (see `VariableType`)
 pub enum VariableValue {
-    /// The value for a floating-point number. This is a f64.
-    Real(f64),
     /// The value for an integer number. This is an i64.
     Integer(i64),
+    /// The value for a floating-point number. This is a f64.
+    Real(f64),
     /// The value for a boolean variable.
     Boolean(bool),
     /// The value for a choice variable.

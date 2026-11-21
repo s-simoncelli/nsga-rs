@@ -1,9 +1,11 @@
 use std::collections::HashMap;
+use std::mem;
 #[cfg(feature = "plotting")]
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+use log::debug;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -11,7 +13,7 @@ use crate::algorithms::AlgorithmSerialisedExport;
 use crate::core::{Individual, Individuals, OError, Objective, ObjectiveDirection, Problem};
 use crate::metrics::hypervolume_2d::HyperVolume2D;
 use crate::metrics::{HyperVolumeFonseca2006, HyperVolumeWhile2012};
-use crate::utils::{vector_max, vector_min};
+use crate::utils::{fast_non_dominated_sort, vector_max, vector_min};
 
 /// Check the input arguments of the hyper-volume functions.
 ///
@@ -88,31 +90,81 @@ pub(crate) fn check_ref_point_coordinate(
     ref_point_coordinate: f64,
     coordinate_idx: usize,
 ) -> Result<(), String> {
-    // the reference point must not dominate any objectives
+    // the reference point must not dominate any objectives. `objective_values` are stored
+    // negated for maximised objectives, so the coordinate is negated too before comparing.
     let max_obj = vector_max(objective_values).map_err(|e| e.to_string())?;
+    let is_minimised = objective.direction() == ObjectiveDirection::Minimise;
+    let internal_coordinate = if is_minimised {
+        ref_point_coordinate
+    } else {
+        -ref_point_coordinate
+    };
 
-    if (objective.direction() == ObjectiveDirection::Minimise) & (ref_point_coordinate <= max_obj) {
-        return Err(
-            format!(
-                "The coordinate ({}) of the reference point #{} must be strictly larger than the maximum value of objective '{}' ({}). The reference point must not dominate any objectives.",
-                ref_point_coordinate ,
-                coordinate_idx,
-                objective.name(),
-                max_obj
-        ));
-    } else if (objective.direction() == ObjectiveDirection::Maximise)
-        & (ref_point_coordinate >= max_obj)
-    {
-        return Err(
-            format!(
-                "The coordinate ({}) of the reference point #{} must be strictly smaller than the minimum value of objective '{}' ({}). The reference point must not dominate any objectives.",
-                ref_point_coordinate,
-                coordinate_idx,
-                objective.name(),
-                -max_obj
-        ));
+    if internal_coordinate > max_obj {
+        return Ok(());
     }
-    Ok(())
+    let (bound, value) = if is_minimised {
+        ("larger than the maximum", max_obj)
+    } else {
+        ("smaller than the minimum", -max_obj)
+    };
+    Err(format!(
+        "The coordinate ({}) of the reference point #{} must be strictly {} value of objective '{}' ({}). The reference point must not dominate any objectives.",
+        ref_point_coordinate,
+        coordinate_idx,
+        bound,
+        objective.name(),
+        value
+    ))
+}
+
+/// Get the non-dominated front of `individuals` and check that `reference_point` does not
+/// dominate it. All the objectives in the returned values are minimised.
+///
+/// returns: `Result<(Vec<Vec<f64>>, Vec<f64>), OError>`: the objective values of each individual
+/// in the front and the reference point, with the sign of maximised coordinates flipped.
+pub(crate) fn prepare_front(
+    individuals: &mut [Individual],
+    reference_point: &[f64],
+    metric_name: &str,
+) -> Result<(Vec<Vec<f64>>, Vec<f64>), OError> {
+    let error = |e: String| OError::Metric(metric_name.to_string(), e);
+    check_args(individuals, reference_point).map_err(error)?;
+
+    // get non-dominated front with feasible solutions only
+    let problem = individuals[0].problem();
+    let num_individuals = individuals.len();
+    let mut front_data = fast_non_dominated_sort(individuals, true, None)?;
+    let front = mem::take(&mut front_data.fronts[0]);
+    if num_individuals != front.len() {
+        debug!(
+            "{} individuals were removed from the given data because they are dominated by all the other points",
+            num_individuals - front.len()
+        );
+    }
+
+    // the reference point must not dominate any point in the front
+    let mut ref_point = reference_point.to_vec();
+    for (obj_idx, (obj_name, obj)) in problem.objectives().iter().enumerate() {
+        check_ref_point_coordinate(
+            &front.objective_values(obj_name)?,
+            obj,
+            reference_point[obj_idx],
+            obj_idx + 1,
+        )
+        .map_err(error)?;
+        if obj.direction() == ObjectiveDirection::Maximise {
+            ref_point[obj_idx] *= -1.0;
+        }
+    }
+
+    let objective_values = front
+        .iter()
+        .map(Individual::get_objective_values)
+        .collect::<Result<Vec<Vec<f64>>, _>>()?;
+    debug!("Using non-dominated front {:?}", objective_values);
+    debug!("Reference point is {:?}", ref_point);
+    Ok((objective_values, ref_point))
 }
 
 /// Struct with methods to calculate the exact hyper-volume metric. Depending on the number of problem
@@ -177,7 +229,7 @@ impl AllHyperVolumeFileData {
         let (hv_min, hv_max) = if let Some((min, max)) = min_max {
             if max < min {
                 return Err(OError::Generic(
-                    "The min point must be larger than the max".to_string(),
+                    "The max point must be larger than the min".to_string(),
                 ));
             }
             (min, max)
@@ -185,6 +237,10 @@ impl AllHyperVolumeFileData {
             (vector_min(&values)?, vector_max(&values)?)
         };
         let delta = hv_max - hv_min;
+        // all values are equal (for example with one file): nothing to normalise
+        if delta == 0.0 {
+            return Ok(vec![0.0; values.len()]);
+        }
         Ok(values.iter().map(|v| (hv_max - *v) / delta).collect())
     }
 
