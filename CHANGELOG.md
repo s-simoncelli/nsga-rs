@@ -1,3 +1,53 @@
+## [1.7.0] - 2026-11-21
+
+### 🚀 Features
+
+- Variable::generate and VariableType::generate_random_value take the RNG as an argument so that the algorithm seed can be passed down to the number generator for variables
+- Add Individual::new_random and pass the RNG to Population::init
+- HyperVolumeChange now ignores points that are not better than the reference point instead of stopping the run with an error
+
+### 🐛 Bug Fixes
+
+- Do not flip the objective sign in read_json_file as this is done already by Individual::deserialise
+- Get_rng(None) now uses a random seed
+- In Niching sort the reference-point candidates before choosing one at random, so seeded runs are reproducible
+- Compute the crowding distance within each front, skip flat objectives and seed the initial population
+- In NSGA3 seed the initial population with the algorithm RNG and reject non-numeric variables
+- In EpsNSGA2 use the seeded RNG for new individuals, crowd each front and allow generation_step of 1
+- Remaining-time estimate can no longer panic, reject generation_step 0, and plot_front shows the sign the user expects
+- Try the Integer variant before Real when deserialising VariableType and VariableValue, so integer variables are no longer read back as reals
+- Try integer DataValue variants before real ones, and let as_usize accept a non-negative integer read from JSON
+- Rebuild an exported problem in the saved objective, variable and constraint order instead of the random HashMap order, and add the JSON test
+- Restore the individual's data when deserialising, and check feasibility and constraint violation without copying the problem constraints
+- Flip the reference-point coordinate of maximised objectives before checking it, add the shared prepare_front helper, and return zeros from normalised_values when all values are equal
+- Reject infinite plane intercepts in NSGA3 normalisation and fall back to the max points
+- All_close now checks every element and the vector lengths
+- Always recompute EpsNSGA2 hyper-box data and use wrapping_add for the intra-run seed
+- The TournamentSelector now compares two instead of three competitors
+- Return a MutationOperator error from the polynomial mutation operator
+
+### 📚 Documentation
+
+- The README now mentions that only real and integer variables are supported by the built-in operators
+- Re-run convergence example after changes made to the RNG seed
+
+### 🧪 Testing
+
+- Check that a positive reference coordinate below the minimum of a maximised objective is accepted
+- Do not apply a tolerance to the least-squares regression test
+
+### ⚙️ Miscellaneous Tasks
+
+- Moved env_logger to dev dependencies as this is only used by the examples
+- Re-export ensure_numeric_variables in algorithms mod
+- Add crate-internal Constraint::name_str to read the name without copying it
+- Rebuild exported individuals with Population::deserialise and read the number of reference points as usize
+- Remove commented-out code in NSGA3 niching
+- Read the objective or data values once per dominance check
+- Fixed linting
+- The 2nd objective function of the ZTD2Problem can now be called statically
+- The ZTD2 and ZTD2 tests now uses seed 1 as seed 2 requires more generations to converge
+- Changed seeds in DTLZ1 and DTLZ2 in NSGA3 so that test problems converge with less generations
 ## [1.6.0] - 2026-11-15
 
 ### 🚀 Features
@@ -17,6 +67,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Fixed linting in convergence.rs
+- *(release)* V1.6.0
 ## [1.5.0] - 2026-11-15
 
 ### 🚀 Features
