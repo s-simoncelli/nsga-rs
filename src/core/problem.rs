@@ -661,6 +661,7 @@ pub mod builtin_problems {
             g * (1.0 - f64::sqrt(x[0] / g))
         }
     }
+
     impl Evaluator for ZTD1Problem {
         fn evaluate(&self, i: &Individual) -> Result<EvaluationResult, Box<dyn Error>> {
             let x: Vec<f64> = i
@@ -716,9 +717,9 @@ pub mod builtin_problems {
         }
 
         /// The second objective function.
-        pub fn f2(&self, x: &[f64]) -> f64 {
-            let a: f64 = (1..self.n).map(|xi| x[xi]).sum();
-            let g = 1.0 + 9.0 * a / (self.n as f64 - 1.0);
+        pub fn f2(x: &[f64], n: usize) -> f64 {
+            let a: f64 = (1..n).map(|xi| x[xi]).sum();
+            let g = 1.0 + 9.0 * a / (n as f64 - 1.0);
             g * (1.0 - (x[0] / g).powi(2))
         }
     }
@@ -733,7 +734,7 @@ pub mod builtin_problems {
 
             let mut objectives = HashMap::new();
             objectives.insert("f1".to_string(), ZTD2Problem::f1(&x));
-            objectives.insert("f2".to_string(), self.f2(&x));
+            objectives.insert("f2".to_string(), ZTD2Problem::f2(&x, self.n));
             Ok(EvaluationResult {
                 constraints: None,
                 objectives,
